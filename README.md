@@ -1,2 +1,2 @@
 # racket-space-traders
-Explore the Space Traders API using Racket
+Explore the [Space Traders API](https://spacetraders.io/) using Racket
