@@ -118,6 +118,11 @@
       (hash-ref 'cargo)
       (hash-ref 'inventory)))
 
+(define (ship-current-fuel ship-symbol)
+  (~> (get-ship-details ship-symbol)
+      (hash-ref 'fuel)
+      (hash-ref 'current)))
+
 (define (navigate-ship ship-symbol waypoint-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/navigate") "")]
         [data (hash 'waypointSymbol waypoint-symbol)])
@@ -141,9 +146,23 @@
 
 (define (extract-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/extract") "")])
-    (let ([extract-result (post uri #f 201)])
-      (hash-ref extract-result 'data))))
+    (hash-ref (post uri #f 201) 'data)))
 
+(define (extract-result-cooldown-seconds extract-result)
+  (~> extract-result
+      (hash-ref 'cooldown)
+      (hash-ref 'remainingSeconds)))  
+         
+(define (extract-result-capacity extract-result)
+  (~> extract-result
+      (hash-ref 'cargo)
+      (hash-ref 'capacity)))
+         
+(define (extract-result-units extract-result)
+  (~> extract-result
+      (hash-ref 'cargo)
+      (hash-ref 'units)))
+         
 (define (list-waypoint-market-data waypoint-id)
   (let* (
          [system-id (extract-system-id waypoint-id)]
@@ -157,7 +176,7 @@
 
 ;; pairs of (symbol . units)
 (define (sell-ship-inventory ship-symbol exclude-symbol)
-  (for ([pair (list-ship-inventory ship-symbol)]
+  (for/list ([pair (list-ship-inventory ship-symbol)]
         #:unless (equal? (car pair) exclude-symbol))
     (sell-ship-inventory-item ship-symbol (car pair) (cdr pair))))
 
@@ -169,11 +188,29 @@
 ;;   - dock
 ;;   - sell cargo
 (define (mining-cycle ship-symbol contract-goods-symbol contract-units)
+  (printf "~a~n" "docking")
   (dock-ship ship-symbol)
+  (printf "refueling: started with ~a~n" (ship-current-fuel "DRFOGOUT-2"))
   (refuel-ship ship-symbol)
+  (printf "orbiting: fuel ~a~n" (ship-current-fuel "DRFOGOUT-2"))
   (orbit-ship ship-symbol)
-  (extract-ship ship-symbol)
+  (printf "~a~n" "extracting")
+  (let extract-loop ([extract-result (extract-ship ship-symbol)])
+    (printf "extract-result: ~a~n" extract-result)
+    (let* ([seconds-remaining (extract-result-cooldown-seconds extract-result)]
+           [capacity (extract-result-capacity extract-result)]
+           [units (extract-result-units extract-result)]
+           [remaining-capacity (- capacity units)])
+      (printf "cooling ~a seconds~n" seconds-remaining)
+      (sleep seconds-remaining)
+      (printf "remaining capacity ~a~n" remaining-capacity)
+      (cond
+        [(zero? remaining-capacity) #t]
+        [else (extract-loop (extract-ship ship-symbol))])))                                    
+  (printf "inventory after extract ~a~n" (list-ship-inventory ship-symbol))
+  (printf "~a~n" "docking")
   (dock-ship ship-symbol)
-  
+  (printf "selling. retaining ~a~n" contract-goods-symbol)
+  (sell-ship-inventory ship-symbol contract-goods-symbol)
+  (printf "inventory after sale ~a~n" (list-ship-inventory ship-symbol))
   #t)
-  
