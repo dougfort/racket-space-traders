@@ -118,6 +118,11 @@
       (hash-ref 'cargo)
       (hash-ref 'inventory)))
 
+(define (ship-cargo-capacity ship-symbol)
+  (~> (get-ship-details ship-symbol)
+      (hash-ref 'cargo)
+      (hash-ref 'capacity)))
+
 (define (ship-current-fuel ship-symbol)
   (~> (get-ship-details ship-symbol)
       (hash-ref 'fuel)
@@ -138,7 +143,14 @@
 
 (define (list-ship-inventory ship-symbol)
   (for/list ([item (ship-inventory ship-symbol)])
-    (cons (hash-ref item 'symbol) (hash-ref item 'units)))) 
+    (cons (hash-ref item 'symbol) (hash-ref item 'units))))
+
+(define (inventory-amount trade-symbol ship-inventory)
+  (let ([xs (filter (λ (x) (equal? (car x) trade-symbol)) ship-inventory)])
+    (cond
+      [(null? xs) 0]
+      [(equal? (length xs) 1) (cdr (first xs))]
+      [else (error (format "invalid inventory ~s;" ship-inventory))])))
   
 (define (orbit-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/orbit") "")])
@@ -181,22 +193,30 @@
     (sell-ship-inventory-item ship-symbol (car pair) (cdr pair))))
 
 ;; repeat cycle until we have enough to fulfill our contract
+(define (extract-contract-cargo ship-symbol contract-goods-symbol)
+  (define capacity (ship-cargo-capacity ship-symbol))
+  (let contract-loop ([units (extract-and-sell-cargo ship-symbol contract-goods-symbol)])
+    (printf "contract cargo units: ~a~n" units)
+    (cond
+      [(equal? units capacity) #t]
+      [else (contract-loop (extract-and-sell-cargo ship-symbol contract-goods-symbol))])))
+
 ;;   - dock
 ;;   - refuel
 ;;   - orbit
-;;   - extract until full or goal reached
+;;   - extract until full
 ;;   - dock
 ;;   - sell cargo
-(define (mining-cycle ship-symbol contract-goods-symbol contract-units)
+;; return the amount of contract cargo in inventory
+(define (extract-and-sell-cargo ship-symbol contract-goods-symbol)
   (printf "~a~n" "docking")
   (dock-ship ship-symbol)
-  (printf "refueling: started with ~a~n" (ship-current-fuel "DRFOGOUT-2"))
+  (printf "refueling: started with ~a~n" (ship-current-fuel ship-symbol))
   (refuel-ship ship-symbol)
-  (printf "orbiting: fuel ~a~n" (ship-current-fuel "DRFOGOUT-2"))
+  (printf "orbiting: fuel ~a~n" (ship-current-fuel ship-symbol))
   (orbit-ship ship-symbol)
   (printf "~a~n" "extracting")
   (let extract-loop ([extract-result (extract-ship ship-symbol)])
-    (printf "extract-result: ~a~n" extract-result)
     (let* ([seconds-remaining (extract-result-cooldown-seconds extract-result)]
            [capacity (extract-result-capacity extract-result)]
            [units (extract-result-units extract-result)]
@@ -212,5 +232,6 @@
   (dock-ship ship-symbol)
   (printf "selling. retaining ~a~n" contract-goods-symbol)
   (sell-ship-inventory ship-symbol contract-goods-symbol)
-  (printf "inventory after sale ~a~n" (list-ship-inventory ship-symbol))
-  #t)
+  (let ([ship-inventory (list-ship-inventory ship-symbol)])
+    (printf "inventory after sale ~a~n" ship-inventory)
+    (inventory-amount contract-goods-symbol ship-inventory)))
