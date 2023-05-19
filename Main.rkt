@@ -160,4 +160,20 @@
   (for ([pair (list-ship-inventory ship-symbol)]
         #:unless (equal? (car pair) exclude-symbol))
     (sell-ship-inventory-item ship-symbol (car pair) (cdr pair))))
-        
+
+;; repeat cycle until we have enough to fulfill our contract
+;;   - dock
+;;   - refuel
+;;   - orbit
+;;   - extract until full or goal reached
+;;   - dock
+;;   - sell cargo
+(define (mining-cycle ship-symbol contract-goods-symbol contract-units)
+  (dock-ship ship-symbol)
+  (refuel-ship ship-symbol)
+  (orbit-ship ship-symbol)
+  (extract-ship ship-symbol)
+  (dock-ship ship-symbol)
+  
+  #t)
+  
