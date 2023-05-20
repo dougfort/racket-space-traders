@@ -43,6 +43,16 @@
   (let ([uri (string-join (list "/v2/my/contracts/" contract-id) "")])
     (hash-ref (api-get uri) 'data)))
 
+(define (list-contract-deliverables contract-id)
+  (~> (get-contract-details contract-id)
+      (hash-ref 'terms)
+      (hash-ref 'deliver)))
+
+(define (contract-deliver-cargo contract-id ship-symbol trade-symbol units)
+  (let ([uri (string-join (list "/v2/my/contracts/" contract-id "/deliver") "")]
+        [data (hash 'shipSymbol ship-symbol 'tradeSymbol trade-symbol 'units units)])
+    (api-post uri data))) 
+
 (define (list-waypoints-with-shipyard system-id)
   (filter (λ (wp) (waypoint-has-trait? wp "SHIPYARD")) (list-waypoints system-id)))
 
@@ -70,10 +80,21 @@
       (hash-ref 'nav)
       (hash-ref 'status)))
 
+(define (ship-location ship-symbol)
+  (~> (get-ship-details ship-symbol)
+      (hash-ref 'nav)
+      (hash-ref 'waypointSymbol)))
+
 (define (ship-inventory ship-symbol)
   (~> (get-ship-details ship-symbol)
       (hash-ref 'cargo)
       (hash-ref 'inventory)))
+
+(define (ship-inventory-units inventory trade-symbol)
+  (for/or ([item inventory])
+    (cond
+      [(equal? (hash-ref item 'symbol) trade-symbol) (hash-ref item 'units)]
+      [else #f])))
 
 (define (ship-cargo-capacity ship-symbol)
   (~> (get-ship-details ship-symbol)
@@ -146,8 +167,27 @@
 ;; pairs of (symbol . units)
 (define (sell-ship-inventory ship-symbol exclude-symbol)
   (for/list ([pair (list-ship-inventory ship-symbol)]
-        #:unless (equal? (car pair) exclude-symbol))
+             #:unless (equal? (car pair) exclude-symbol))
     (sell-ship-inventory-item ship-symbol (car pair) (cdr pair))))
+
+(define (process-contract ship-symbol contract-id)
+  (for ([deliverable (list-contract-deliverables contract-id)])
+    (let ([delivery-waypoint-symbol (hash-ref deliverable 'destinationSymbol)]
+          [trade-symbol (hash-ref deliverable 'tradeSymbol)])
+      (process-contract-deliverable ship-symbol contract-id delivery-waypoint-symbol trade-symbol))))
+
+(define (process-contract-deliverable ship-symbol contract-id delivery-waypoint-symbol trade-symbol)
+  (let ([starting-waypoint-symbol (ship-location ship-symbol)]
+        [units (ship-inventory-units (ship-inventory ship-symbol) trade-symbol)])
+    (printf "navigate: ~a; from ~a to ~a~n"
+            ship-symbol starting-waypoint-symbol delivery-waypoint-symbol)
+    (navigate-ship ship-symbol delivery-waypoint-symbol)
+    (printf "delivering ~s units of ~s; ~n" units trade-symbol)
+    (let ([delivery-result (contract-deliver-cargo contract-id ship-symbol trade-symbol units)])
+      (printf "delivery-result: ~s~n" delivery-result))
+    (printf "navigate: ~a; from ~a to ~a~n"
+            ship-symbol delivery-waypoint-symbol starting-waypoint-symbol )
+    (navigate-ship ship-symbol starting-waypoint-symbol)))
 
 ;; repeat cycle until we have enough to fulfill our contract
 (define (extract-contract-cargo ship-symbol contract-goods-symbol)
