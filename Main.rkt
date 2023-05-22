@@ -4,176 +4,28 @@
 
 (require threading)
 (require "api.rkt")
+(require "agent.rkt")
+(require "contract.rkt")
+(require "ship.rkt")
+(require "waypoint.rkt")
 
-;; extract system id from (current) waypoint-id
-(define (extract-system-id waypoint-id)
-  (string-join (take (string-split waypoint-id "-") 2) "-"))
+(define (agent-system-id)
+  (extract-system-id (agent-headquarters)))
 
-(define (get-agent-details)
-  (hash-ref (api-get "/v2/my/agent") 'data))
-
-(define (agent-headquarters)
-  (~> (get-agent-details)
-      (hash-ref 'headquarters)))
-
-(define (list-waypoints system-id)
-  (let ([uri (string-join (list "/v2/systems/" system-id "/waypoints") "")])
-    (hash-ref (api-get uri) 'data)))
-
-(define (get-waypoint-details waypoint-id)  
-  (let* (
-         [system-id (extract-system-id waypoint-id)]
-         [uri (string-join (list "/v2/systems/" system-id "/waypoints/" waypoint-id) "")])
-    (hash-ref (api-get uri) 'data)))
-
-(define (waypoint-has-trait? waypoint-details trait-symbol)
-  (memf (λ (t) (equal? (hash-ref t 'symbol) trait-symbol)) (hash-ref waypoint-details 'traits)))
-
-(define (waypoint-type waypoint-details)
-  (hash-ref waypoint-details 'type))
-
-(define (list-contracts)
-  (hash-ref (api-get "/v2/my/contracts") 'data))
-
-(define (accept-contract contract-id)
-  (let ([uri (string-join (list "/v2/my/contracts/" contract-id "/accept") "")])
-    (api-post uri #f)))
-
-(define (get-contract-details contract-id)
-  (let ([uri (string-join (list "/v2/my/contracts/" contract-id) "")])
-    (hash-ref (api-get uri) 'data)))
-
-(define (list-contract-deliverables contract-id)
-  (~> (get-contract-details contract-id)
-      (hash-ref 'terms)
-      (hash-ref 'deliver)))
-
-(define (contract-deliver-cargo contract-id ship-symbol trade-symbol units)
-  (let ([uri (string-join (list "/v2/my/contracts/" contract-id "/deliver") "")]
-        [data (hash 'shipSymbol ship-symbol 'tradeSymbol trade-symbol 'units units)])
-    (api-post uri data))) 
-
-(define (list-waypoints-with-shipyard system-id)
-  (filter (λ (wp) (waypoint-has-trait? wp "SHIPYARD")) (list-waypoints system-id)))
-
-(define (list-asteroid-field-waypoints system-id)
-  (filter (λ (wp) (equal? (waypoint-type wp) "ASTEROID_FIELD")) (list-waypoints system-id)))
-
-(define (list-shipyard-ships system-id shipyard-id)
-  (let ([uri (string-join (list "/v2/systems/" system-id "/waypoints/" shipyard-id "/shipyard") "")])
-    (hash-ref (api-get uri) 'data)))
-  
-(define (purchase-ship ship-type shipyard-waypoint-symbol)
-  (let ([uri "/v2/my/ships"]
-        [data (hash 'shipType ship-type 'waypointSymbol shipyard-waypoint-symbol)])
-    (api-post uri data 201)))
-
-(define (list-my-ships)
-  (hash-ref (api-get "/v2/my/ships") 'data))
-
-(define (get-ship-details ship-symbol)
-  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol) "")])
-    (hash-ref (api-get uri) 'data)))
-
-(define (ship-status ship-symbol)
-  (~> (get-ship-details ship-symbol)
-      (hash-ref 'nav)
-      (hash-ref 'status)))
-
-(define (ship-location ship-symbol)
-  (~> (get-ship-details ship-symbol)
-      (hash-ref 'nav)
-      (hash-ref 'waypointSymbol)))
-
-(define (ship-inventory ship-symbol)
-  (~> (get-ship-details ship-symbol)
-      (hash-ref 'cargo)
-      (hash-ref 'inventory)))
-
-(define (ship-inventory-units inventory trade-symbol)
-  (for/or ([item inventory])
-    (cond
-      [(equal? (hash-ref item 'symbol) trade-symbol) (hash-ref item 'units)]
-      [else #f])))
-
-(define (ship-cargo-capacity ship-symbol)
-  (~> (get-ship-details ship-symbol)
-      (hash-ref 'cargo)
-      (hash-ref 'capacity)))
-
-(define (ship-current-fuel ship-symbol)
-  (~> (get-ship-details ship-symbol)
-      (hash-ref 'fuel)
-      (hash-ref 'current)))
-
-(define (navigate-ship ship-symbol waypoint-symbol)
-  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/navigate") "")]
-        [data (hash 'waypointSymbol waypoint-symbol)])
-    (api-post uri data)))
-
-(define (dock-ship ship-symbol)
-  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/dock") "")])
-    (api-post uri #f)))
-
-(define (refuel-ship ship-symbol)
-  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/refuel") "")])
-    (api-post uri #f)))
-
-(define (list-ship-inventory ship-symbol)
-  (for/list ([item (ship-inventory ship-symbol)])
-    (cons (hash-ref item 'symbol) (hash-ref item 'units))))
-
-(define (inventory-amount trade-symbol ship-inventory)
-  (let ([xs (filter (λ (x) (equal? (car x) trade-symbol)) ship-inventory)])
-    (cond
-      [(null? xs) 0]
-      [(equal? (length xs) 1) (cdr (first xs))]
-      [else (error (format "invalid inventory ~s;" ship-inventory))])))
-  
-(define (orbit-ship ship-symbol)
-  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/orbit") "")])
-    (api-post uri #f)))
-
-(define (extract-ship ship-symbol)
-  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/extract") "")])
-    (hash-ref (api-post uri #f 201) 'data)))
-
-(define (extract-result-cooldown-seconds extract-result)
-  (~> extract-result
-      (hash-ref 'cooldown)
-      (hash-ref 'remainingSeconds)))  
-         
-(define (extract-result-capacity extract-result)
-  (~> extract-result
-      (hash-ref 'cargo)
-      (hash-ref 'capacity)))
-         
-(define (extract-result-units extract-result)
-  (~> extract-result
-      (hash-ref 'cargo)
-      (hash-ref 'units)))
-         
-(define (list-waypoint-market-data waypoint-id)
-  (let* (
-         [system-id (extract-system-id waypoint-id)]
-         [uri (string-join (list "/v2/systems/" system-id "/waypoints/" waypoint-id "/market") "")])
-    (hash-ref (api-get uri) 'data)))
-
-(define (sell-ship-inventory-item ship-symbol trade-symbol units)
-  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/sell") "")]
-        [data (hash 'symbol trade-symbol 'units units)])
-    (hash-ref (api-post uri data 201) 'data)))
-
-;; pairs of (symbol . units)
-(define (sell-ship-inventory ship-symbol exclude-symbol)
-  (for/list ([pair (list-ship-inventory ship-symbol)]
-             #:unless (equal? (car pair) exclude-symbol))
-    (sell-ship-inventory-item ship-symbol (car pair) (cdr pair))))
+(define (locate-asteroid-field system-id)
+  (hash-ref (first (list-asteroid-field-waypoints system-id)) 'symbol))
 
 (define (process-contract ship-symbol contract-id)
-  (for ([deliverable (list-contract-deliverables contract-id)])
+  (define asteroid-field-symbol (locate-asteroid-field (agent-system-id))) 
+  (printf "navigate: ~a; from ~a to ~a~n"
+          ship-symbol (ship-location ship-symbol) asteroid-field-symbol)
+  (navigate-ship ship-symbol asteroid-field-symbol)
+  (wait-while-in-transit ship-symbol)
+  
+  (for ([deliverable (list-contract-deliverables contract-id)])   
     (let ([delivery-waypoint-symbol (hash-ref deliverable 'destinationSymbol)]
           [trade-symbol (hash-ref deliverable 'tradeSymbol)])
+      (extract-contract-deliverable ship-symbol trade-symbol)
       (process-contract-deliverable ship-symbol contract-id delivery-waypoint-symbol trade-symbol))))
 
 (define (process-contract-deliverable ship-symbol contract-id delivery-waypoint-symbol trade-symbol)
@@ -189,8 +41,8 @@
             ship-symbol delivery-waypoint-symbol starting-waypoint-symbol )
     (navigate-ship ship-symbol starting-waypoint-symbol)))
 
-;; repeat cycle until we have enough to fulfill our contract
-(define (extract-contract-cargo ship-symbol contract-goods-symbol)
+;; repeat cycle until we have a full cargo of the deliverable
+(define (extract-contract-deliverable ship-symbol contract-goods-symbol)
   (define capacity (ship-cargo-capacity ship-symbol))
   (let contract-loop ([units (extract-and-sell-cargo ship-symbol contract-goods-symbol)])
     (printf "contract cargo units: ~a~n" units)
