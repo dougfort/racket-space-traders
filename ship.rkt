@@ -5,7 +5,9 @@
 (require threading)
 (require "api.rkt")
 
-(provide ship-location
+(provide list-my-ships
+         ship-status
+         ship-location
          ship-inventory-units
          ship-inventory
          list-ship-inventory

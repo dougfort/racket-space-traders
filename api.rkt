@@ -30,9 +30,11 @@
                  #:method #"GET"
                  #:headers (list (create-auth-header)))])
     (let-values ([(status reason) (parse-status-line status-line)])
-      (unless (= 200 status)
-        (error (format "invalid HTTP status ~s; ~s" status reason))))
-    (read-json data-port)))
+      (let ([body (read-json data-port)])
+        (cond
+          [(= 200 status) body]
+          [else
+           (error (format "invalid HTTP status ~s; ~s; ~s~n~s"status reason uri body))])))))
 
 ;; generic HTTP POST of URI and JSON data
 (define (api-post uri data [expected-status 200])
@@ -50,7 +52,8 @@
                                    "Content-Type: application/json")
                    #:data post-data)])
       (let-values ([(status reason) (parse-status-line status-line)])
-        (unless (= expected-status status)
-          (error (format "invalid HTTP status ~s; ~s; ~s" status reason uri))))
-      (read-json data-port))))
-
+        (let ([body (read-json data-port)])
+          (cond
+            [(= 200 status) body]
+            [else
+             (error (format "invalid HTTP status ~s; ~s; ~s~n~s"status reason uri body))]))))))
