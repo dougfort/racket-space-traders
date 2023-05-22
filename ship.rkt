@@ -20,6 +20,7 @@
          ship-current-fuel
          refuel-ship
          orbit-ship
+         survey-waypoint
          extract-ship
          extract-result-cooldown-seconds
          extract-result-capacity
@@ -103,9 +104,13 @@
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/orbit") "")])
     (api-post uri #f)))
 
-(define (extract-ship ship-symbol)
+(define (survey-waypoint ship-symbol)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/survey") "")])
+     (hash-ref (api-post uri #f) 'data)))
+
+(define (extract-ship ship-symbol survey-result)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/extract") "")])
-    (hash-ref (api-post uri #f 201) 'data)))
+    (hash-ref (api-post uri survey-result 201) 'data)))
 
 (define (extract-result-cooldown-seconds extract-result)
   (~> extract-result

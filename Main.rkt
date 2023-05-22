@@ -16,12 +16,6 @@
   (hash-ref (first (list-asteroid-field-waypoints system-id)) 'symbol))
 
 (define (process-contract ship-symbol contract-id)
-  (define asteroid-field-symbol (locate-asteroid-field (agent-system-id))) 
-  (printf "navigate: ~a; from ~a to ~a~n"
-          ship-symbol (ship-location ship-symbol) asteroid-field-symbol)
-  (navigate-ship ship-symbol asteroid-field-symbol)
-  (wait-while-in-transit ship-symbol)
-  
   (for ([deliverable (list-contract-deliverables contract-id)])   
     (let ([delivery-waypoint-symbol (hash-ref deliverable 'destinationSymbol)]
           [trade-symbol (hash-ref deliverable 'tradeSymbol)])
@@ -68,14 +62,16 @@
 ;;   - sell cargo
 ;; return the amount of contract cargo in inventory
 (define (extract-and-sell-cargo ship-symbol contract-goods-symbol)
-  (printf "~a~n" "docking")
+  (printf "~a~n" "refueling")
   (dock-ship ship-symbol)
-  (printf "refueling: started with ~a~n" (ship-current-fuel ship-symbol))
-  (refuel-ship ship-symbol)
-  (printf "orbiting: fuel ~a~n" (ship-current-fuel ship-symbol))
+  (refuel-ship ship-symbol)  
   (orbit-ship ship-symbol)
+
+  ;; the mining drone doesn't have a survey mount
+  (define survey-result #f)
+
   (printf "~a~n" "extracting")
-  (let extract-loop ([extract-result (extract-ship ship-symbol)])
+  (let extract-loop ([extract-result (extract-ship ship-symbol survey-result)])
     (let* ([seconds-remaining (extract-result-cooldown-seconds extract-result)]
            [capacity (extract-result-capacity extract-result)]
            [units (extract-result-units extract-result)]
@@ -85,7 +81,8 @@
       (printf "remaining capacity ~a~n" remaining-capacity)
       (cond
         [(zero? remaining-capacity) #t]
-        [else (extract-loop (extract-ship ship-symbol))])))                                    
+        [else (extract-loop (extract-ship ship-symbol survey-result))])))
+    
   (printf "inventory after extract ~a~n" (list-ship-inventory ship-symbol))
   (printf "~a~n" "docking")
   (dock-ship ship-symbol)
