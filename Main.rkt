@@ -19,9 +19,19 @@
   (for ([deliverable (list-contract-deliverables contract-id)])   
     (let ([delivery-waypoint-symbol (hash-ref deliverable 'destinationSymbol)]
           [trade-symbol (hash-ref deliverable 'tradeSymbol)])
-      (extract-contract-deliverable ship-symbol trade-symbol)
-      (process-contract-deliverable ship-symbol contract-id delivery-waypoint-symbol trade-symbol))))
-
+      (let deliverable-loop ([units-fulfilled (hash-ref deliverable 'unitsFulfilled)]
+                             [units-required (hash-ref deliverable 'unitsRequired)])
+        (cond
+          [(equal? units-fulfilled units-required) #t]
+          [else
+           (extract-contract-deliverable ship-symbol trade-symbol)
+           (let* ([deliverable (process-contract-deliverable ship-symbol
+                                                             contract-id
+                                                             delivery-waypoint-symbol trade-symbol)]
+                  [units-fulfilled (hash-ref deliverable 'unitsFulfilled)]
+                  [units-required (hash-ref deliverable 'unitsRequired)])
+             (deliverable-loop units-fulfilled units-required))])))))
+           
 (define (process-contract-deliverable ship-symbol contract-id delivery-waypoint-symbol trade-symbol)
   (let ([starting-waypoint-symbol (ship-location ship-symbol)]
         [units (ship-inventory-units (ship-inventory ship-symbol) trade-symbol)])
@@ -35,15 +45,21 @@
     (refuel-ship ship-symbol)
     
     (printf "delivering ~s units of ~s; ~n" units trade-symbol)
-    (let ([delivery-result (contract-deliver-cargo contract-id ship-symbol trade-symbol units)])
-      (printf "delivery-result: ~s~n" delivery-result))
+    (let* ([delivery-result (contract-deliver-cargo contract-id ship-symbol trade-symbol units)]
+           [contract (~>
+                      delivery-result
+                      (hash-ref 'data)
+                      (hash-ref 'contract))]
+           [deliverable (contract-deliverable contract trade-symbol)]) 
+      (printf "deliverable ~s~n" deliverable)
 
-    (orbit-ship ship-symbol)
+      (orbit-ship ship-symbol)
     
-    (printf "navigate: ~a; from ~a to ~a~n"
-            ship-symbol delivery-waypoint-symbol starting-waypoint-symbol )
-    (navigate-ship ship-symbol starting-waypoint-symbol)
-    (wait-while-in-transit ship-symbol)))
+      (printf "navigate: ~a; from ~a to ~a~n"
+              ship-symbol delivery-waypoint-symbol starting-waypoint-symbol )
+      (navigate-ship ship-symbol starting-waypoint-symbol)
+      (wait-while-in-transit ship-symbol)
+      deliverable)))
 
 ;; repeat cycle until we have a full cargo of the deliverable
 (define (extract-contract-deliverable ship-symbol contract-goods-symbol)

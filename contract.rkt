@@ -5,7 +5,11 @@
 (require threading)
 (require "api.rkt")
 
-(provide list-contracts accept-contract list-contract-deliverables contract-deliver-cargo)
+(provide list-contracts
+         accept-contract
+         list-contract-deliverables
+         contract-deliver-cargo
+         contract-deliverable)
 
 (define (list-contracts)
   (hash-ref (api-get "/v2/my/contracts") 'data))
@@ -28,3 +32,11 @@
         [data (hash 'shipSymbol ship-symbol 'tradeSymbol trade-symbol 'units units)])
     (api-post uri data))) 
 
+(define (contract-deliverable contract trade-symbol)
+  (let ([deliverables (~>
+                       contract
+                       (hash-ref 'terms)
+                       (hash-ref 'deliver))])
+    (findf (λ (d) (equal? (hash-ref d 'tradeSymbol) trade-symbol)))))
+                      
+                       
