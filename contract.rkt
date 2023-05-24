@@ -37,6 +37,6 @@
                        contract
                        (hash-ref 'terms)
                        (hash-ref 'deliver))])
-    (findf (λ (d) (equal? (hash-ref d 'tradeSymbol) trade-symbol)))))
+    (findf (λ (d) (equal? (hash-ref d 'tradeSymbol) trade-symbol)) deliverables)))
                       
                        
