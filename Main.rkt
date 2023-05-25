@@ -126,6 +126,8 @@
 
     ;; pairs of (symbol . units)
     (for ([pair (list-ship-inventory ship-symbol)])
+      (printf "unecessary delay, HTTP limit~n")
+      (sleep 1)
       (let ([symbol (car pair)]
             [units (cdr pair)])
         (cond
