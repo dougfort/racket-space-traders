@@ -9,7 +9,8 @@
          list-waypoints-with-shipyard
          list-shipyard-ships
          purchase-ship
-         list-asteroid-field-waypoints)
+         list-asteroid-field-waypoints
+         list-waypoint-market-trade-goods)
 
 ;; extract system id from (current) waypoint-id
 (define (extract-system-id waypoint-id)
@@ -46,9 +47,11 @@
 (define (list-asteroid-field-waypoints system-id)
   (filter (λ (wp) (equal? (waypoint-type wp) "ASTEROID_FIELD")) (list-waypoints system-id)))
 
-(define (list-waypoint-market-data waypoint-id)
+(define (get-waypoint-market-data waypoint-id)
   (let* (
          [system-id (extract-system-id waypoint-id)]
          [uri (string-join (list "/v2/systems/" system-id "/waypoints/" waypoint-id "/market") "")])
     (hash-ref (api-get uri) 'data)))
 
+(define (list-waypoint-market-trade-goods waypoint-id)
+  (hash-ref (get-waypoint-market-data waypoint-id) 'tradeGoods))

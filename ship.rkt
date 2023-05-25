@@ -11,18 +11,21 @@
          ship-inventory-units
          ship-inventory
          list-ship-inventory
-         sell-ship-inventory
+         sell-ship-inventory-item
+         jettison-ship-inventory-item
          inventory-amount
          navigate-ship
          wait-while-in-transit
          ship-cargo-capacity
+         ship-cargo-units
          dock-ship
          ship-current-fuel
          refuel-ship
          orbit-ship
+         ship-has-survery-mount?
          survey-waypoint
          extract-ship
-         extract-result-cooldown-seconds
+         cooldown-seconds
          extract-result-capacity
          extract-result-units)
 
@@ -58,6 +61,11 @@
   (~> (get-ship-details ship-symbol)
       (hash-ref 'cargo)
       (hash-ref 'capacity)))
+
+(define (ship-cargo-units ship-symbol)
+  (~> (get-ship-details ship-symbol)
+      (hash-ref 'cargo)
+      (hash-ref 'units)))
 
 (define (ship-current-fuel ship-symbol)
   (~> (get-ship-details ship-symbol)
@@ -104,16 +112,22 @@
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/orbit") "")])
     (api-post uri #f)))
 
+(define (ship-has-survery-mount? ship-symbol)
+  (let ([mounts (~> (get-ship-details ship-symbol)
+                    (hash-ref 'mounts))])
+    (findf (λ (m) (string-prefix? (hash-ref m 'symbol) "MOUNT_SURVEYOR")) mounts)))                
+
 (define (survey-waypoint ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/survey") "")])
-     (hash-ref (api-post uri #f) 'data)))
+    (hash-ref (api-post uri #f 201) 'data)))
 
-(define (extract-ship ship-symbol survey-result)
-  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/extract") "")])
-    (hash-ref (api-post uri survey-result 201) 'data)))
+(define (extract-ship ship-symbol survey)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/extract") "")]
+        [data (if survey (hash 'survey survey) #f)])
+    (hash-ref (api-post uri data 201) 'data)))
 
-(define (extract-result-cooldown-seconds extract-result)
-  (~> extract-result
+(define (cooldown-seconds result)
+  (~> result
       (hash-ref 'cooldown)
       (hash-ref 'remainingSeconds)))  
          
@@ -132,9 +146,8 @@
         [data (hash 'symbol trade-symbol 'units units)])
     (hash-ref (api-post uri data 201) 'data)))
 
-;; pairs of (symbol . units)
-(define (sell-ship-inventory ship-symbol exclude-symbol)
-  (for/list ([pair (list-ship-inventory ship-symbol)]
-             #:unless (equal? (car pair) exclude-symbol))
-    (sell-ship-inventory-item ship-symbol (car pair) (cdr pair))))
+(define (jettison-ship-inventory-item ship-symbol trade-symbol units)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/jettison") "")]
+        [data (hash 'symbol trade-symbol 'units units)])
+    (hash-ref (api-post uri data 200) 'data)))
 
