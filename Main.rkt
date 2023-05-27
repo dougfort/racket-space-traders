@@ -3,11 +3,14 @@
 ;; 
 
 (require threading)
+(require racket/date)
 (require "api.rkt")
 (require "agent.rkt")
 (require "contract.rkt")
 (require "ship.rkt")
 (require "waypoint.rkt")
+(require "timestamp.rkt")
+(require "wait-queue.rkt")
 
 (define (agent-system-id)
   (extract-system-id (agent-headquarters)))
@@ -39,9 +42,14 @@
     
     (printf "navigate: ~a; from ~a to ~a~n"
             ship-symbol starting-waypoint-symbol delivery-waypoint-symbol)
-    (navigate-ship ship-symbol delivery-waypoint-symbol)
-    (wait-while-in-transit ship-symbol)
-    
+    (let* ([nav-result (navigate-ship ship-symbol delivery-waypoint-symbol)]
+           [arrival (nav-result-arrival nav-result)])
+      (let ([q (make-queue)])
+        (printf "IN_TRANSIT until ~s~n" (date->string arrival #t))
+        (queue-add-until! q (date->seconds arrival #f) "IN_ORBIT")
+        (queue-wait q)
+        (printf "wait complete: ~s~n" (queue-pop q))))
+            
     (dock-ship ship-symbol)
     (refuel-ship ship-symbol)
     
@@ -58,8 +66,14 @@
     
       (printf "navigate: ~a; from ~a to ~a~n"
               ship-symbol delivery-waypoint-symbol starting-waypoint-symbol )
-      (navigate-ship ship-symbol starting-waypoint-symbol)
-      (wait-while-in-transit ship-symbol)
+      (let* ([nav-result (navigate-ship ship-symbol starting-waypoint-symbol)]
+             [arrival (nav-result-arrival nav-result)])
+        (let ([q (make-queue)])
+          (printf "IN_TRANSIT until ~s~n" (date->string arrival #t))
+          (queue-add-until! q (date->seconds arrival #f) "IN_ORBIT")
+          (queue-wait q)
+          (printf "wait complete: ~s~n" (queue-pop q))))
+      
       deliverable)))
 
 ;; return a survey, or #f if the ship is not equipped for survey
@@ -68,10 +82,13 @@
     [(ship-has-survery-mount? ship-symbol)
      (printf "surveying~n")
      (let* ([survey-result (survey-waypoint ship-symbol)]
-            [seconds-remaining (cooldown-seconds survey-result)]
+            [expiration (cooldown-expiration survey-result)]
             [surveys (hash-ref survey-result 'surveys)])
-       (printf "cooling after survey ~a seconds~n" seconds-remaining)
-       (sleep seconds-remaining)
+       (let ([q (make-queue)])
+         (printf "cooling after survey until ~a~n" (date->string expiration #t))
+         (queue-add-until! q (date->seconds expiration #f) "survey cooling")
+         (queue-wait q)
+         (printf "wait complete: ~s~n" (queue-pop q)))
        (first surveys))]
     [else #f]))
 
@@ -98,6 +115,8 @@
 ;;   - sell cargo
 ;; return the amount of contract cargo in inventory
 (define (extract-and-sell-cargo ship-symbol contract-goods-symbol)
+  (printf "delay 10 sec to avoid HTTP error~n")
+  (sleep 10)
   (printf "~a~n" "refueling")
   (dock-ship ship-symbol)
   (refuel-ship ship-symbol)  
@@ -109,12 +128,15 @@
     (when (> (ship-cargo-capacity ship-symbol) (ship-cargo-units ship-symbol))
       (printf "~a~n" "extracting")
       (let extract-loop ([extract-result (extract-ship ship-symbol survey)])
-        (let* ([seconds-remaining (cooldown-seconds extract-result)]
+        (let* ([expiration (cooldown-expiration extract-result)]
                [capacity (extract-result-capacity extract-result)]
                [units (extract-result-units extract-result)]
                [remaining-capacity (- capacity units)])
-          (printf "cooling after extract ~a seconds~n" seconds-remaining)
-          (sleep seconds-remaining)
+          (let ([q (make-queue)])
+            (printf "cooling after extracting until ~a~n" (date->string expiration #t))
+            (queue-add-until! q (date->seconds expiration #f) "survey cooling")
+            (queue-wait q)
+            (printf "wait complete: ~a~n" (queue-pop q)))
           (printf "remaining capacity ~a~n" remaining-capacity)
           (cond
             [(zero? remaining-capacity) #t]
