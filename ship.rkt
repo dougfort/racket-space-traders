@@ -4,6 +4,7 @@
 
 (require threading)
 (require "api.rkt")
+(require "timestamp.rkt")
 
 (provide list-my-ships
          ship-status
@@ -15,7 +16,7 @@
          jettison-ship-inventory-item
          inventory-amount
          navigate-ship
-         wait-while-in-transit
+         nav-result-arrival
          ship-cargo-capacity
          ship-cargo-units
          dock-ship
@@ -25,7 +26,7 @@
          ship-has-survery-mount?
          survey-waypoint
          extract-ship
-         cooldown-seconds
+         cooldown-expiration
          extract-result-capacity
          extract-result-units)
 
@@ -77,17 +78,10 @@
         [data (hash 'waypointSymbol waypoint-symbol)])
     (api-post uri data)))
 
-(define (wait-while-in-transit ship-symbol)
-  (define in-transit-status "IN_TRANSIT")
-  (define sleep-seconds 10)
-  (let status-loop ([current-status (ship-status ship-symbol)])
-    (printf "current status ~a~n" current-status)
-    (cond
-      [(equal? current-status in-transit-status)
-       (printf "sleeping ~a seconds~n" sleep-seconds)
-       (sleep sleep-seconds)
-       (status-loop (ship-status ship-symbol))]
-      [else #t]))) 
+(define (nav-result-arrival nav-result)
+  (~> nav-result
+      (hash-ref 'nav)
+      (hash-ref 'arrival)))
 
 (define (dock-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/dock") "")])
@@ -126,10 +120,10 @@
         [data (if survey (hash 'survey survey) #f)])
     (hash-ref (api-post uri data 201) 'data)))
 
-(define (cooldown-seconds result)
-  (~> result
+(define (cooldown-expiration result)
+  (parse-timestamp (~> result
       (hash-ref 'cooldown)
-      (hash-ref 'remainingSeconds)))  
+      (hash-ref 'expiration))))  
          
 (define (extract-result-capacity extract-result)
   (~> extract-result
