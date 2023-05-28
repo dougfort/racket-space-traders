@@ -6,7 +6,7 @@
 (require "api.rkt")
 (require "timestamp.rkt")
 
-(provide list-my-ships
+(provide list-ships
          ship-status
          ship-location
          ship-inventory-units
@@ -30,7 +30,7 @@
          extract-result-capacity
          extract-result-units)
 
-(define (list-my-ships)
+(define (list-ships)
   (hash-ref (api-get "/v2/my/ships") 'data))
 
 (define (get-ship-details ship-symbol)
@@ -76,7 +76,7 @@
 (define (navigate-ship ship-symbol waypoint-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/navigate") "")]
         [data (hash 'waypointSymbol waypoint-symbol)])
-    (api-post uri data)))
+    (hash-ref (api-post uri data) 'data)))
 
 (define (nav-result-arrival nav-result)
   (~> nav-result
@@ -85,11 +85,11 @@
 
 (define (dock-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/dock") "")])
-    (api-post uri #f)))
+    (hash-ref (api-post uri #f) 'data)))
 
 (define (refuel-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/refuel") "")])
-    (api-post uri #f)))
+    (hash-ref (api-post uri #f) 'data)))
 
 (define (list-ship-inventory ship-symbol)
   (for/list ([item (ship-inventory ship-symbol)])
@@ -104,7 +104,7 @@
   
 (define (orbit-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/orbit") "")])
-    (api-post uri #f)))
+    (hash-ref (api-post uri #f) 'data)))
 
 (define (ship-has-survery-mount? ship-symbol)
   (let ([mounts (~> (get-ship-details ship-symbol)
