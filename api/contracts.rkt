@@ -3,7 +3,7 @@
 ;; 
 
 (require threading)
-(require "api.rkt")
+(require "http.rkt")
 
 (provide list-contracts
          accept-contract
@@ -30,7 +30,7 @@
 (define (contract-deliver-cargo contract-id ship-symbol trade-symbol units)
   (let ([uri (string-join (list "/v2/my/contracts/" contract-id "/deliver") "")]
         [data (hash 'shipSymbol ship-symbol 'tradeSymbol trade-symbol 'units units)])
-    (api-post uri data))) 
+    (hash-ref (api-post uri data) 'data))) 
 
 (define (contract-deliverable contract trade-symbol)
   (let ([deliverables (~>
@@ -39,4 +39,8 @@
                        (hash-ref 'deliver))])
     (findf (λ (d) (equal? (hash-ref d 'tradeSymbol) trade-symbol)) deliverables)))
                       
+(define (contract-fulfill contract-id)
+  (let ([uri (string-join (list "/v2/my/contracts/" contract-id "/fulfill") "")])
+    (hash-ref (api-post uri #f)))) 
+
                        

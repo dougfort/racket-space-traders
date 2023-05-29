@@ -3,7 +3,7 @@
 ;; 
 
 (require threading)
-(require "api.rkt")
+(require "http.rkt")
 (require "timestamp.rkt")
 
 (provide list-ships
@@ -144,4 +144,8 @@
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/jettison") "")]
         [data (hash 'symbol trade-symbol 'units units)])
     (hash-ref (api-post uri data 200) 'data)))
+
+(define (ship-negotiate-contract ship-symbol )
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/negotiate/contract") "")])
+    (hash-ref (api-post uri #f 201) 'data)))
 

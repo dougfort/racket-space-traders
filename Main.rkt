@@ -4,13 +4,10 @@
 
 (require threading)
 (require racket/date)
-(require "api.rkt")
-(require "agents.rkt")
-(require "contracts.rkt")
-(require "fleet.rkt")
-(require "systems.rkt")
-(require "timestamp.rkt")
-(require "wait-queue.rkt")
+(require "api/agents.rkt")
+(require "api/contracts.rkt")
+(require "api/fleet.rkt")
+(require "api/systems.rkt")
 
 (define (agent-system-id)
   (extract-system-id (agent-headquarters)))
@@ -18,7 +15,13 @@
 (define (locate-asteroid-field system-id)
   (hash-ref (first (list-asteroid-field-waypoints system-id)) 'symbol))
 
-(define (process-contract wait-queue ship-symbol contract-id)
+(define (wait date-seconds)
+  (let ([delta (- date-seconds (current-seconds))])
+    (cond
+      [(<= delta 0) #t]
+      [else (sleep delta)])))
+
+(define (process-contract ship-symbol contract-id)
   (for ([deliverable (list-contract-deliverables contract-id)])   
     (let ([delivery-waypoint-symbol (hash-ref deliverable 'destinationSymbol)]
           [trade-symbol (hash-ref deliverable 'tradeSymbol)])
@@ -36,7 +39,7 @@
                   [units-required (hash-ref deliverable 'unitsRequired)])
              (deliverable-loop units-fulfilled units-required))])))))
            
-(define (process-contract-deliverable wait-queue ship-symbol contract-id delivery-waypoint-symbol trade-symbol)
+(define (process-contract-deliverable ship-symbol contract-id delivery-waypoint-symbol trade-symbol)
   (let ([starting-waypoint-symbol (ship-location ship-symbol)]
         [units (ship-inventory-units (ship-inventory ship-symbol) trade-symbol)])
     
@@ -45,9 +48,7 @@
     (let* ([nav-result (navigate-ship ship-symbol delivery-waypoint-symbol)]
            [arrival (nav-result-arrival nav-result)])
       (printf "IN_TRANSIT until ~s~n" (date->string arrival #t))
-      (queue-add-until! wait-queue (date->seconds arrival #f) "IN_ORBIT")
-      (queue-wait wait-queue)
-      (printf "wait complete: ~s~n" (queue-pop wait-queue)))
+      (wait (date->seconds arrival #f)))
             
     (dock-ship ship-symbol)
     (refuel-ship ship-symbol)
@@ -68,14 +69,12 @@
       (let* ([nav-result (navigate-ship ship-symbol starting-waypoint-symbol)]
              [arrival (nav-result-arrival nav-result)])
         (printf "IN_TRANSIT until ~s~n" (date->string arrival #t))
-        (queue-add-until! wait-queue (date->seconds arrival #f) "IN_ORBIT")
-        (queue-wait wait-queue)
-        (printf "wait complete: ~s~n" (queue-pop wait-queue)))
+        (wait (date->seconds arrival #f)))
       
       deliverable)))
 
 ;; return a survey, or #f if the ship is not equipped for survey
-(define (survey-waypoint-if-capable wait-queue ship-symbol)
+(define (survey-waypoint-if-capable ship-symbol)
   (cond
     [(ship-has-survery-mount? ship-symbol)
      (printf "surveying~n")
@@ -83,9 +82,7 @@
             [expiration (cooldown-expiration survey-result)]
             [surveys (hash-ref survey-result 'surveys)])
        (printf "cooling after survey until ~a~n" (date->string expiration #t))
-       (queue-add-until! wait-queue (date->seconds expiration #f) "survey cooling")
-       (queue-wait wait-queue)
-       (printf "wait complete: ~s~n" (queue-pop wait-queue))
+       (wait (date->seconds expiration #f))
        (first surveys))]
     [else #f]))
 
@@ -111,7 +108,7 @@
 ;;   - dock
 ;;   - sell cargo
 ;; return the amount of contract cargo in inventory
-(define (extract-and-sell-cargo wait-queue ship-symbol contract-goods-symbol)
+(define (extract-and-sell-cargo ship-symbol contract-goods-symbol)
   (printf "delay 10 sec to avoid HTTP error~n")
   (sleep 10)
   (printf "~a~n" "refueling")
@@ -130,9 +127,7 @@
                [units (extract-result-units extract-result)]
                [remaining-capacity (- capacity units)])
           (printf "cooling after extracting until ~a~n" (date->string expiration #t))
-          (queue-add-until! wait-queue (date->seconds expiration #f) "extract cooling")
-          (queue-wait wait-queue)
-          (printf "wait complete: ~a~n" (queue-pop wait-queue))
+          (wait (date->seconds expiration #f))
           (printf "remaining capacity ~a~n" remaining-capacity)
           (cond
             [(zero? remaining-capacity) #t]

@@ -7,6 +7,8 @@
 
 (define callsign "DRFOGOUT")
 (define faction "COSMIC")
+(define email "doug.fort@gmail.com")
+(define expected-status 201)
 
 ;; looking for '("HTTP/1.1" "200" "OK")
 ;; returning (status reason)
@@ -16,7 +18,7 @@
 
 (define (register-agent)
   (let ([uri "/v2/register"]
-        [post-data (jsexpr->string (hash 'symbol callsign 'faction faction))])
+        [post-data (jsexpr->string (hash 'symbol callsign 'faction faction 'email email))])
     (let-values ([(status-line header-list data-port)
                   (http-sendrecv
                    "api.spacetraders.io"
@@ -26,6 +28,7 @@
                    #:headers (list "Content-Type: application/json")
                    #:data post-data)])
       (let-values ([(status reason) (parse-status-line status-line)])
-        (unless (= 201 status)
-          (error (format "invalid HTTP status ~s; ~s; ~s" status reason uri))))
-    (read-json data-port))))
+        (let ([body (read-json data-port)])
+          (cond
+            [(= expected-status status) body]
+            [else (error (format "invalid HTTP status ~s; ~s; ~s; ~s" status reason uri body))]))))))
