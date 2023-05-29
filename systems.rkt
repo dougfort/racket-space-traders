@@ -16,9 +16,22 @@
 (define (extract-system-id waypoint-id)
   (string-join (take (string-split waypoint-id "-") 2) "-"))
 
+(define (list-systems)
+  (let ([uri "/v2/systems"])
+    (hash-ref (api-get uri) 'data)))
+
+(define (list-system-by-key key)
+  (map (λ (s) (hash-ref s key)) (list-systems)))
+
 (define (list-waypoints system-id)
   (let ([uri (string-join (list "/v2/systems/" system-id "/waypoints") "")])
     (hash-ref (api-get uri) 'data)))
+
+(define (list-waypoints-traits system-id)
+  (for ([wp (list-waypoints system-id)])
+    (printf "symbol: ~a; type: ~a~n" (hash-ref wp 'symbol) (hash-ref wp 'type))
+    (for ([t (hash-ref wp 'traits)])
+      (printf "    ~a~n" (hash-ref t 'symbol)))))
 
 (define (get-waypoint-details waypoint-id)  
   (let* (
