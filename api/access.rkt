@@ -6,7 +6,7 @@
 
 (define access-token #f)
 
-(define access-token-path "../access-token.txt")
+(define access-token-path "/home/dougfort/Development/racket-space-traders/access-token.txt")
 
 (define (load-access-token)
   (set! access-token

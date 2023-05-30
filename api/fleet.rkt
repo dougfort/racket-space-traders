@@ -79,9 +79,10 @@
     (hash-ref (api-post uri data) 'data)))
 
 (define (nav-result-arrival nav-result)
-  (~> nav-result
-      (hash-ref 'nav)
-      (hash-ref 'arrival)))
+  (parse-timestamp (~> nav-result
+                       (hash-ref 'nav)
+                       (hash-ref 'route)
+                       (hash-ref 'arrival))))
 
 (define (dock-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/dock") "")])
@@ -122,8 +123,8 @@
 
 (define (cooldown-expiration result)
   (parse-timestamp (~> result
-      (hash-ref 'cooldown)
-      (hash-ref 'expiration))))  
+                       (hash-ref 'cooldown)
+                       (hash-ref 'expiration))))  
          
 (define (extract-result-capacity extract-result)
   (~> extract-result

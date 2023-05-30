@@ -57,7 +57,6 @@
     (let* ([delivery-result (contract-deliver-cargo contract-id ship-symbol trade-symbol units)]
            [contract (~>
                       delivery-result
-                      (hash-ref 'data)
                       (hash-ref 'contract))]
            [deliverable (contract-deliverable contract trade-symbol)]) 
       (printf "deliverable ~s~n" deliverable)
