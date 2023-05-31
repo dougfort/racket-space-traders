@@ -6,8 +6,8 @@
 (require racket/date)
 
 (provide make-queue
-         queue-add!
-         queue-add-until!
+         queue-push-by-seconds!
+         queue-push-by-date!
          queue-empty?
          queue-wait
          queue-pop)
@@ -24,11 +24,11 @@
 (define (make-queue)
   (make-heap entry<=?))
 
-(define (queue-add! q wait-secs payload)
+(define (queue-push-by-seconds! q wait-secs payload)
   (heap-add! q (entry (+ (current-seconds) wait-secs) payload)))
 
-(define (queue-add-until! q deadline payload)
-  (heap-add! q (entry deadline payload)))
+(define (queue-push-by-date! q deadline payload)
+  (heap-add! q (entry (date->seconds deadline #f) payload)))
 
 (define (queue-empty? q)
   (zero? (heap-count  q)))
@@ -46,6 +46,7 @@
 (define (queue-pop q)
   (let* ([e (heap-min q)]
          [delta (- (entry-secs e) (current-seconds))])
+    (heap-remove-min! q)
     (cond
       [(<= delta 0) (entry-payload e)]
       [else (error "delay has not finished ~s" e)])))
