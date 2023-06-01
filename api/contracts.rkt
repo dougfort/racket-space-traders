@@ -41,6 +41,6 @@
                       
 (define (contract-fulfill contract-id)
   (let ([uri (string-join (list "/v2/my/contracts/" contract-id "/fulfill") "")])
-    (hash-ref (api-post uri #f)))) 
+    (hash-ref (api-post uri #f) 'data))) 
 
                        
