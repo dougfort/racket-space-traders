@@ -28,7 +28,9 @@
       (let deliverable-loop ([units-fulfilled (hash-ref deliverable 'unitsFulfilled)]
                              [units-required (hash-ref deliverable 'unitsRequired)])
         (cond
-          [(equal? units-fulfilled units-required) #t]
+          [(equal? units-fulfilled units-required)
+           (printf "fulfilling contract ~s~n" contract-id)
+           (contract-fulfill contract-id)]
           [else
            (extract-contract-deliverable ship-symbol trade-symbol)
            (let* ([deliverable (process-contract-deliverable ship-symbol
