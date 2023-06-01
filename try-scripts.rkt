@@ -19,15 +19,10 @@
 (struct task-step (pos state)) 
 (struct task-result (timestamp next state))
 
-(define navigate-script-id 'navigate-script)
-
-
 ;; navigate to agent headquarters
 ;; then navige to the asteroid field and back
 ;; 3 times
-(define (build-navigate-script)
-  (define ship-id "REDSHIFT-1")
-  (define asteroid-field "X1-NU19-72345Z")
+(define (build-navigate-script ship-id asteroid-field)
   (define hq (agent-headquarters))
   (define max-count 3)
   (define navigate-to-hq
@@ -61,12 +56,20 @@
   (define queue (make-queue))
   (define scripts (make-hash))
   
+  (define ship-id "REDSHIFT-1")
+  (define asteroid-field "X1-NU19-72345Z")
+  
 
-  (hash-set! scripts navigate-script-id (build-navigate-script))
+  (hash-set! scripts 'ship-1-script-id (build-navigate-script "REDSHIFT-1" "X1-NU19-72345Z"))
+  (hash-set! scripts 'ship-2-script-id (build-navigate-script "REDSHIFT-2" "X1-NU19-72345Z"))
   
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos navigate-script-id 0) (make-state)))
+                       (task-step (script-pos 'ship-1-script-id 0) (make-state)))
+
+  (queue-push-by-date! queue
+                       (current-utc-date)
+                       (task-step (script-pos 'ship-2-script-id 0) (make-state)))
 
   (process-queue scripts queue))
 
@@ -99,9 +102,9 @@
                              [(equal? op 'increment) (add1 script-index)]
                              [else (find-label-index script op)])])
                                                 
-              (queue-push-by-date! queue
-                                   timestamp
-                                   (task-step (script-pos script-id index) state)))))])
+                (queue-push-by-date! queue
+                                     timestamp
+                                     (task-step (script-pos script-id index) state)))))])
        (process-queue scripts queue))]))
 
 ;; search a script vector
@@ -116,6 +119,10 @@
 ;; navigate the ship to the specified location
 ;; do nothing if the ship is already there
 (define (navigate ship-symbol destination-symbol)
+  (dock-ship ship-symbol)
+  (refuel-ship ship-symbol)  
+  (orbit-ship ship-symbol)
+  
   (printf "navigate ~s ~s~n" ship-symbol destination-symbol)
   (let ([current-location (ship-location ship-symbol)])
     (cond
