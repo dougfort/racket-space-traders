@@ -18,9 +18,8 @@
 
 (struct task (label fn))
 (struct script-pos (id index))
-(struct script-next (script-id op))
 (struct task-step (pos state)) 
-(struct task-result (timestamp next state))
+(struct task-result (timestamp op state))
 
 ;; navigate to agent headquarters
 ;; then navige to the asteroid field and back
@@ -30,22 +29,18 @@
   (define max-count 3)
   (define navigate-to-hq
     (λ (script-id state) (let ([timestamp (navigate ship-id hq)])
-                           (task-result timestamp (script-next script-id 'increment) state)))) 
+                           (task-result timestamp 'increment state)))) 
   (define navigate-to-asteroid-field
     (λ (script-id state) (let ([timestamp (navigate ship-id asteroid-field)])
-                           (task-result timestamp (script-next script-id 'increment) state)))) 
+                           (task-result timestamp 'increment state)))) 
   (define check-count
     (λ (script-id state) (let ([timestamp (current-utc-date)]
                                [next-count (add1 (hash-ref state 'count 0))])
                            (cond                                
                              [(>= next-count max-count)
-                              (task-result timestamp
-                                           (script-next script-id 'increment)
-                                           (hash-set state 'count 0))]
+                              (task-result timestamp 'increment (hash-set state 'count 0))]
                              [else
-                              (task-result timestamp
-                                           (script-next script-id 'repeat)
-                                           (hash-set state 'count next-count))]))))
+                              (task-result timestamp 'repeat (hash-set state 'count next-count))]))))
     
      
   (list->vector (list
@@ -58,10 +53,10 @@
   (define hq (agent-headquarters))
   (define navigate-to-hq
     (λ (script-id state) (let ([timestamp (navigate ship-id hq)])
-                           (task-result timestamp (script-next script-id 'increment) state)))) 
+                           (task-result timestamp 'increment state)))) 
   (define negotiate
     (λ (script-id state) (let ([timestamp (current-utc-date)])
-                           (task-result timestamp (script-next script-id 'increment) state))))      
+                           (task-result timestamp 'increment state))))      
   (list->vector (list
                  (task null navigate-to-hq)
                  (task null negotiate))))
@@ -113,20 +108,18 @@
           (printf "end of script ~s~n" script-id)]
          [else
           (let* ([task-item (vector-ref script script-index)]
-                 [fn (task-fn task-item)])
-            (let* ([result (fn script-id state)]
-                   [timestamp (task-result-timestamp result)]
-                   [next (task-result-next result)]
-                   [state (task-result-state result)]
-                   [script-id (script-next-script-id next)]
-                   [op (script-next-op next)])
-              (let ([index (cond
-                             [(equal? op 'increment) (add1 script-index)]
-                             [else (find-label-index script op)])])
+                 [fn (task-fn task-item)]
+                 [result (fn script-id state)]
+                 [timestamp (task-result-timestamp result)]
+                 [op (task-result-op result)]
+                 [state (task-result-state result)]
+                 [index (cond
+                          [(equal? op 'increment) (add1 script-index)]
+                          [else (find-label-index script op)])])
                                                 
-                (queue-push-by-date! queue
-                                     timestamp
-                                     (task-step (script-pos script-id index) state)))))])
+            (queue-push-by-date! queue
+                                 timestamp
+                                 (task-step (script-pos script-id index) state)))])
        (process-queue scripts queue))]))
 
 ;; search a script vector
