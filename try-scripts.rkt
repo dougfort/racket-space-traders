@@ -56,6 +56,7 @@
                            (task-result timestamp 'increment state)))) 
   (define negotiate
     (λ (script-id state) (let ([timestamp (current-utc-date)])
+                           (negotiate-contract ship-id)
                            (task-result timestamp 'increment state))))      
   (list->vector (list
                  (task null navigate-to-hq)
@@ -156,4 +157,5 @@
   (refuel-ship ship-symbol)  
   
   (printf "negotiate contract ~s~n" ship-symbol)
-  (ship-negotiate-contract ship-symbol))
+  (let ([result (ship-negotiate-contract ship-symbol)])
+    (printf "contract result: ~n~s~n" result)))

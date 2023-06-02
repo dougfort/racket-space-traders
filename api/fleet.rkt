@@ -149,5 +149,5 @@
 
 (define (ship-negotiate-contract ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/negotiate/contract") "")])
-    (hash-ref (api-post uri #f 201) 'data)))
+    (hash-ref (api-post uri #f 200) 'data)))
 
