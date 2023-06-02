@@ -9,7 +9,8 @@
          accept-contract
          list-contract-deliverables
          contract-deliver-cargo
-         contract-deliverable)
+         contract-deliverable
+         contract-fulfill)
 
 (define (list-contracts)
   (hash-ref (api-get "/v2/my/contracts") 'data))

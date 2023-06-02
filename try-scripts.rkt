@@ -10,6 +10,9 @@
 (define (current-utc-date)
   (seconds->date (current-seconds) #f))
 
+(define (increment-current-utc-date amount)
+  (seconds->date (+ (current-seconds) amount) #f))
+
 (define (make-state)
   (hash))
 
@@ -50,16 +53,23 @@
                  (task 'repeat navigate-to-asteroid-field)
                  (task null navigate-to-hq)
                  (task null check-count))))
-                                                                        
 
-(define (run)
+(define (build-negotiate-script ship-id)
+  (define hq (agent-headquarters))
+  (define navigate-to-hq
+    (λ (script-id state) (let ([timestamp (navigate ship-id hq)])
+                           (task-result timestamp (script-next script-id 'increment) state)))) 
+  (define negotiate
+    (λ (script-id state) (let ([timestamp (current-utc-date)])
+                           (task-result timestamp (script-next script-id 'increment) state))))      
+  (list->vector (list
+                 (task null navigate-to-hq)
+                 (task null negotiate))))
+
+(define (run-navigate-test)
   (define queue (make-queue))
   (define scripts (make-hash))
   
-  (define ship-id "REDSHIFT-1")
-  (define asteroid-field "X1-NU19-72345Z")
-  
-
   (hash-set! scripts 'ship-1-script-id (build-navigate-script "REDSHIFT-1" "X1-NU19-72345Z"))
   (hash-set! scripts 'ship-2-script-id (build-navigate-script "REDSHIFT-2" "X1-NU19-72345Z"))
   
@@ -70,6 +80,18 @@
   (queue-push-by-date! queue
                        (current-utc-date)
                        (task-step (script-pos 'ship-2-script-id 0) (make-state)))
+
+  (process-queue scripts queue))
+
+(define (run-negotiate-test)
+  (define queue (make-queue))
+  (define scripts (make-hash))
+  
+  (hash-set! scripts 'negotiate (build-negotiate-script "REDSHIFT-1"))
+  
+  (queue-push-by-date! queue
+                       (current-utc-date)
+                       (task-step (script-pos 'negotiate 0) (make-state)))
 
   (process-queue scripts queue))
 
@@ -126,8 +148,19 @@
   (printf "navigate ~s ~s~n" ship-symbol destination-symbol)
   (let ([current-location (ship-location ship-symbol)])
     (cond
-      [(equal? current-location destination-symbol) (current-utc-date)]
+      [(equal? current-location destination-symbol)
+       ;; wait for a second to avoid triggering API limits
+       (increment-current-utc-date 1)]
       [else
        (let ([nav-result (navigate-ship ship-symbol destination-symbol)])
          (nav-result-arrival nav-result))])))
       
+;; assume ship is at headquarters
+;; dock
+;; negotiate-contract
+(define (negotiate-contract ship-symbol)
+  (dock-ship ship-symbol)
+  (refuel-ship ship-symbol)  
+  
+  (printf "negotiate contract ~s~n" ship-symbol)
+  (ship-negotiate-contract ship-symbol))
