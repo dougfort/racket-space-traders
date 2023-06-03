@@ -14,3 +14,7 @@
 (define (agent-headquarters)
   (~> (get-agent-details)
       (hash-ref 'headquarters)))
+
+(define (agent-credits)
+  (~> (get-agent-details)
+      (hash-ref 'credits)))

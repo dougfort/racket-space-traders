@@ -27,6 +27,9 @@
   (let ([uri (string-join (list "/v2/systems/" system-id "/waypoints") "")])
     (hash-ref (api-get uri) 'data)))
 
+(define (list-waypoint-symbols system-id)
+  (map (λ (wp) (hash-ref wp 'symbol)) (list-waypoints system-id)))
+
 (define (list-waypoints-traits system-id)
   (for ([wp (list-waypoints system-id)])
     (printf "symbol: ~a; type: ~a~n" (hash-ref wp 'symbol) (hash-ref wp 'type))
@@ -37,6 +40,12 @@
   (let* (
          [system-id (extract-system-id waypoint-id)]
          [uri (string-join (list "/v2/systems/" system-id "/waypoints/" waypoint-id) "")])
+    (hash-ref (api-get uri) 'data)))
+
+(define (get-market-details waypoint-id)  
+  (let* (
+         [system-id (extract-system-id waypoint-id)]
+         [uri (string-join (list "/v2/systems/" system-id "/waypoints/" waypoint-id "/market") "")])
     (hash-ref (api-get uri) 'data)))
 
 (define (waypoint-has-trait? waypoint-details trait-symbol)
@@ -60,11 +69,16 @@
 (define (list-asteroid-field-waypoints system-id)
   (filter (λ (wp) (equal? (waypoint-type wp) "ASTEROID_FIELD")) (list-waypoints system-id)))
 
-(define (get-waypoint-market-data waypoint-id)
-  (let* (
-         [system-id (extract-system-id waypoint-id)]
-         [uri (string-join (list "/v2/systems/" system-id "/waypoints/" waypoint-id "/market") "")])
-    (hash-ref (api-get uri) 'data)))
+(define (list-marketplace-waypoints system-id)
+  (filter (λ (wp) (waypoint-has-trait? wp "MARKETPLACE")) (list-waypoints system-id)))
 
 (define (list-waypoint-market-trade-goods waypoint-id)
-  (hash-ref (get-waypoint-market-data waypoint-id) 'tradeGoods))
+  (hash-ref (get-market-details waypoint-id) 'tradeGoods))
+    
+(define (list-waypoint-market-exports waypoint-id)
+  (hash-ref (get-market-details waypoint-id) 'exports))
+    
+(define (list-waypoint-market-export-symbols waypoint-id)
+  (map (λ (x) (hash-ref x 'symbol)) (list-waypoint-market-exports waypoint-id)))
+    
+  
