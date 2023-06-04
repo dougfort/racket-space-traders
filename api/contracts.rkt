@@ -2,14 +2,16 @@
 
 ;; 
 
-(require threading)
-(require "http.rkt")
+;; This module implements the 'contracts' section of the Space Trader V2 API
+;; https://docs.spacetraders.io/api-guide/open-api-spec
 
 (provide list-contracts
          get-contract
          accept-contract
          deliver-contract
          fulfill-contract)
+
+(require "http.rkt")
 
 ;; List all of your contracts.
 (define (list-contracts [limit 10] [page 1])

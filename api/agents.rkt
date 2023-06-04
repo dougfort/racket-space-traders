@@ -2,19 +2,13 @@
 
 ;; 
 
-(require threading)
+;; This module implements the 'agents' section of the Space Trader V2 API
+;; https://docs.spacetraders.io/api-guide/open-api-spec
+
+(provide my-agent-details)
+
 (require "http.rkt")
 
-(provide get-agent-details
-         agent-headquarters)
-
-(define (get-agent-details)
+;; Fetch your agent's details.
+(define (my-agent-details)
   (hash-ref (api-get "/v2/my/agent") 'data))
-
-(define (agent-headquarters)
-  (~> (get-agent-details)
-      (hash-ref 'headquarters)))
-
-(define (agent-credits)
-  (~> (get-agent-details)
-      (hash-ref 'credits)))

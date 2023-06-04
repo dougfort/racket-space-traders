@@ -13,7 +13,6 @@
          get-shipyard
          get-jump-gate)
 
-(require threading)
 (require "http.rkt")
 
 ;; Return a list of all systems.

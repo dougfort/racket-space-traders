@@ -3,7 +3,11 @@
 ;; 
 
 (require threading)
+(require "timestamp.rkt")
 (require "api/systems.rkt")
+(require "api/fleet.rkt")
+(require "api/contracts.rkt")
+(require "api/agents.rkt")
 
 (provide
  extract-system-id)
@@ -49,17 +53,17 @@
   (map (λ (x) (hash-ref x 'symbol)) (list-waypoint-market-exports waypoint-id)))
 
 (define (ship-status ship-symbol)
-  (~> (get-ship-details ship-symbol)
+  (~> (get-ship ship-symbol)
       (hash-ref 'nav)
       (hash-ref 'status)))
 
 (define (ship-location ship-symbol)
-  (~> (get-ship-details ship-symbol)
+  (~> (get-ship ship-symbol)
       (hash-ref 'nav)
       (hash-ref 'waypointSymbol)))
 
 (define (ship-inventory ship-symbol)
-  (~> (get-ship-details ship-symbol)
+  (~> (get-ship ship-symbol)
       (hash-ref 'cargo)
       (hash-ref 'inventory)))
 
@@ -70,17 +74,17 @@
       [else #f])))
 
 (define (ship-cargo-capacity ship-symbol)
-  (~> (get-ship-details ship-symbol)
+  (~> (get-ship ship-symbol)
       (hash-ref 'cargo)
       (hash-ref 'capacity)))
 
 (define (ship-cargo-units ship-symbol)
-  (~> (get-ship-details ship-symbol)
+  (~> (get-ship ship-symbol)
       (hash-ref 'cargo)
       (hash-ref 'units)))
 
 (define (ship-current-fuel ship-symbol)
-  (~> (get-ship-details ship-symbol)
+  (~> (get-ship ship-symbol)
       (hash-ref 'fuel)
       (hash-ref 'current)))
 
@@ -117,13 +121,13 @@
       [else (error (format "invalid inventory ~s;" ship-inventory))])))
   
 (define (ship-has-survery-mount? ship-symbol)
-  (let ([mounts (~> (get-ship-details ship-symbol)
+  (let ([mounts (~> (get-ship ship-symbol)
                     (hash-ref 'mounts))])
     (findf (λ (m) (string-prefix? (hash-ref m 'symbol) "MOUNT_SURVEYOR")) mounts)))                
 
 
 (define (list-contract-deliverables contract-id)
-  (~> (get-contract-details contract-id)
+  (~> (get-contract contract-id)
       (hash-ref 'terms)
       (hash-ref 'deliver)))
 
@@ -134,3 +138,10 @@
                        (hash-ref 'deliver))])
     (findf (λ (d) (equal? (hash-ref d 'tradeSymbol) trade-symbol)) deliverables)))
                       
+(define (agent-headquarters)
+  (~> (my-agent-details)
+      (hash-ref 'headquarters)))
+
+(define (agent-credits)
+  (~> (my-agent-details)
+      (hash-ref 'credits)))

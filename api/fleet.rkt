@@ -34,7 +34,6 @@
          install-mount
          remove-mount)
 
-(require threading)
 (require "http.rkt")
 
 ;; Retrieve all of your ships.

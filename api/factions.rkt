@@ -7,7 +7,6 @@
 
 (provide list-factions get-faction)
 
-(require threading)
 (require "http.rkt")
 
 ;; List all discovered factions in the game.

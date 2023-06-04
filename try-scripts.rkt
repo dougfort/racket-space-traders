@@ -2,10 +2,27 @@
 
 ;; 
 
+(require threading)
 (require racket/date)
+(require "timestamp.rkt")
 (require "api/agents.rkt")
 (require "api/fleet.rkt")
 (require "wait-queue.rkt")
+
+(define (agent-headquarters)
+  (~> (my-agent-details)
+      (hash-ref 'headquarters)))
+
+(define (ship-location ship-symbol)
+  (~> (get-ship ship-symbol)
+      (hash-ref 'nav)
+      (hash-ref 'waypointSymbol)))
+
+(define (nav-result-arrival nav-result)
+  (parse-timestamp (~> nav-result
+                       (hash-ref 'nav)
+                       (hash-ref 'route)
+                       (hash-ref 'arrival))))
 
 (define (current-utc-date)
   (seconds->date (current-seconds) #f))
@@ -157,5 +174,5 @@
   (refuel-ship ship-symbol)  
   
   (printf "negotiate contract ~s~n" ship-symbol)
-  (let ([result (ship-negotiate-contract ship-symbol)])
+  (let ([result (negotiate-contract ship-symbol)])
     (printf "contract result: ~n~s~n" result)))

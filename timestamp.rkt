@@ -9,7 +9,7 @@
 ;; take a string of the form "2019-08-24T14:15:22Z"
 ;; and return a Racket date
 ;; I'm writing this myself because 'gregor' doesn't produce a real date
-;; and I only want to parse the timestamps from the Sppace Traders API
+;; and I only want to parse the timestamps from the Space Traders API
 (define (parse-timestamp str)
   (seconds->date (find-seconds (string->number  (substring str 17 19))
                                (string->number  (substring str 14 16))
