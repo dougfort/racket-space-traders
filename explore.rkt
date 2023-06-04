@@ -122,3 +122,15 @@
     (findf (λ (m) (string-prefix? (hash-ref m 'symbol) "MOUNT_SURVEYOR")) mounts)))                
 
 
+(define (list-contract-deliverables contract-id)
+  (~> (get-contract-details contract-id)
+      (hash-ref 'terms)
+      (hash-ref 'deliver)))
+
+(define (contract-deliverable contract trade-symbol)
+  (let ([deliverables (~>
+                       contract
+                       (hash-ref 'terms)
+                       (hash-ref 'deliver))])
+    (findf (λ (d) (equal? (hash-ref d 'tradeSymbol) trade-symbol)) deliverables)))
+                      
