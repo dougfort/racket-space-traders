@@ -71,20 +71,20 @@
   (define navigate-to-hq
     (λ (script-id state) (let ([timestamp (navigate ship-id hq)])
                            (task-result timestamp 'increment state)))) 
-  (define negotiate
+  (define negotiate-at-hq
     (λ (script-id state) (let ([timestamp (current-utc-date)])
-                           (negotiate-contract ship-id)
+                           (negotiate ship-id)
                            (task-result timestamp 'increment state))))      
   (list->vector (list
                  (task null navigate-to-hq)
-                 (task null negotiate))))
+                 (task null negotiate-at-hq))))
 
 (define (run-navigate-test)
   (define queue (make-queue))
   (define scripts (make-hash))
   
-  (hash-set! scripts 'ship-1-script-id (build-navigate-script "REDSHIFT-1" "X1-NU19-72345Z"))
-  (hash-set! scripts 'ship-2-script-id (build-navigate-script "REDSHIFT-2" "X1-NU19-72345Z"))
+  (hash-set! scripts 'ship-1-script-id (build-navigate-script "DRFOGOUT-1" "X1-HQ18-98695F"))
+  (hash-set! scripts 'ship-2-script-id (build-navigate-script "DRFOGOUT-2" "X1-HQ18-98695F"))
   
   (queue-push-by-date! queue
                        (current-utc-date)
@@ -100,7 +100,7 @@
   (define queue (make-queue))
   (define scripts (make-hash))
   
-  (hash-set! scripts 'negotiate (build-negotiate-script "REDSHIFT-1"))
+  (hash-set! scripts 'negotiate (build-negotiate-script "DRFOGOUT-1"))
   
   (queue-push-by-date! queue
                        (current-utc-date)
@@ -169,7 +169,7 @@
 ;; assume ship is at headquarters
 ;; dock
 ;; negotiate-contract
-(define (negotiate-contract ship-symbol)
+(define (negotiate ship-symbol)
   (dock-ship ship-symbol)
   (refuel-ship ship-symbol)  
   
