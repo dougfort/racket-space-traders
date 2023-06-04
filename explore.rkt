@@ -47,7 +47,7 @@
   (hash-ref (get-market waypoint-id) 'tradeGoods))
     
 (define (list-waypoint-market-exports waypoint-id)
-  (hash-ref (get-market waypoint-id) 'exports))
+  (hash-ref (get-market (extract-system-id waypoint-id) waypoint-id) 'exports))
     
 (define (list-waypoint-market-export-symbols waypoint-id)
   (map (λ (x) (hash-ref x 'symbol)) (list-waypoint-market-exports waypoint-id)))

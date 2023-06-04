@@ -10,6 +10,10 @@
 (require "api/fleet.rkt")
 (require "api/systems.rkt")
 
+;; extract system id from (current) waypoint-id
+(define (extract-system-id waypoint-id)
+  (string-join (take (string-split waypoint-id "-") 2) "-"))
+
 (define (wait date-seconds)
   (let ([delta (- date-seconds (current-seconds))])
     (cond
@@ -60,15 +64,15 @@
                        (hash-ref 'expiration))))  
          
 (define (list-waypoint-market-trade-goods waypoint-id)
-  (hash-ref (get-market waypoint-id) 'tradeGoods))
+  (hash-ref (get-market (extract-system-id waypoint-id) waypoint-id) 'tradeGoods))
     
 (define (ship-cargo-capacity ship-details)
-  (~> (ship-details)
+  (~> ship-details
       (hash-ref 'cargo)
       (hash-ref 'capacity)))
 
 (define (ship-cargo-units ship-details)
-  (~> (ship-details)
+  (~> ship-details
       (hash-ref 'cargo)
       (hash-ref 'units)))
 
@@ -167,7 +171,7 @@
   
 ;; repeat cycle until we have a full cargo of the deliverable
 (define (extract-contract-deliverable ship-symbol contract-goods-symbol)
-  (define capacity (ship-cargo-capacity ship-symbol))
+  (define capacity (ship-cargo-capacity (get-ship ship-symbol)))
   (let contract-loop ([units (extract-and-sell-cargo ship-symbol contract-goods-symbol)])
     (printf "contract cargo units: ~a~n" units)
     (cond
