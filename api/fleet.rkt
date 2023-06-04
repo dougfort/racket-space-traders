@@ -182,11 +182,56 @@
         [data (hash 'symbol cargo-symbol 'units units)])
     (hash-ref (api-post uri data '(201)) 'data)))
 
+;; Activate your ship's sensor arrays to scan for system information.
+(define (scan-systems ship-symbol)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/scan/systems") "")])
+    (hash-ref (api-post uri #f '(201)) 'data)))
+
+;; Activate your ship's sensor arrays to scan for system information.
+(define (scan-waypoints ship-symbol)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/scan/waypoints") "")])
+    (hash-ref (api-post uri #f '(201)) 'data)))
+
+;; Activate your ship's sensor arrays to scan for ship information.
+(define (scan-ships ship-symbol)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/scan/ships") "")])
+    (hash-ref (api-post uri #f '(201)) 'data)))
+
+;; Refuel your ship from the local market.
 (define (refuel-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/refuel") "")])
     (hash-ref (api-post uri #f) 'data)))
 
-(define (ship-negotiate-contract ship-symbol)
-  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/negotiate/contract") "")])
-    (hash-ref (api-post uri #f 200) 'data)))
+;; Purchase cargo.
+(define (purchase-cargo ship-symbol cargo-symbol units)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/purchase") "")]
+        [data (hash 'symbol cargo-symbol 'units units)])
+    (hash-ref (api-post uri data) 'data)))
 
+;; Transfer cargo between ships.
+(define (transfer-cargo ship-symbol cargo-symbol units dest-ship)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/purchase") "")]
+        [data (hash 'symbol cargo-symbol 'units units 'shipSymbol dest-ship)])
+    (hash-ref (api-post uri data) 'data)))
+
+;; Negotiate a contract
+(define (negotiate-contract ship-symbol)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/negotiate/contract") "")])
+    (hash-ref (api-post uri #f '(201)) 'data)))
+
+;; Get the mounts on a ship.
+(define (get-mounts ship-symbol)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/mounts") "")])
+    (hash-ref (api-get uri) 'data)))
+
+;; Install a mount on a ship.
+(define (install-mount ship-symbol mount-symbol)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/mounts/install") "")]
+        [data (hash 'symbol mount-symbol)])
+    (hash-ref (api-post uri data '(201)) 'data)))
+
+;; Remove a mount from a ship.
+(define (remove-mount ship-symbol mount-symbol)
+  (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/mounts/remove") "")]
+        [data (hash 'symbol mount-symbol)])
+    (hash-ref (api-post uri data '(201)) 'data)))
