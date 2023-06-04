@@ -2,83 +2,60 @@
 
 ;; 
 
+;; This module implements the 'systems' section of the Space Trader V2 API
+;; https://docs.spacetraders.io/api-guide/open-api-spec
+
+(provide list-systems
+         get-system
+         list-waypoints
+         get-waypoint
+         get-market
+         get-shipyard
+         get-jump-gate)
+
 (require threading)
 (require "http.rkt")
 
-(provide extract-system-id
-         list-waypoints-with-shipyard
-         list-shipyard-ships
-         purchase-ship
-         list-asteroid-field-waypoints
-         list-waypoint-market-trade-goods)
-
-;; extract system id from (current) waypoint-id
-(define (extract-system-id waypoint-id)
-  (string-join (take (string-split waypoint-id "-") 2) "-"))
-
+;; Return a list of all systems.
 (define (list-systems)
   (let ([uri "/v2/systems"])
     (hash-ref (api-get uri) 'data)))
 
-(define (list-system-by-key key)
-  (map (λ (s) (hash-ref s key)) (list-systems)))
-
-(define (list-waypoints system-id)
-  (let ([uri (string-join (list "/v2/systems/" system-id "/waypoints") "")])
+;; Get the details of a system.
+(define (get-system system-symbol)  
+  (let ([uri (string-join (list "/v2/systems/" system-symbol) "")])
     (hash-ref (api-get uri) 'data)))
 
-(define (list-waypoint-symbols system-id)
-  (map (λ (wp) (hash-ref wp 'symbol)) (list-waypoints system-id)))
-
-(define (list-waypoints-traits system-id)
-  (for ([wp (list-waypoints system-id)])
-    (printf "symbol: ~a; type: ~a~n" (hash-ref wp 'symbol) (hash-ref wp 'type))
-    (for ([t (hash-ref wp 'traits)])
-      (printf "    ~a~n" (hash-ref t 'symbol)))))
-
-(define (get-waypoint-details waypoint-id)  
-  (let* (
-         [system-id (extract-system-id waypoint-id)]
-         [uri (string-join (list "/v2/systems/" system-id "/waypoints/" waypoint-id) "")])
+;; Fetch all of the waypoints for a given system.
+;; System must be charted or a ship must be present to return waypoint details.
+(define (list-waypoints system-symbol)
+  (let ([uri (string-join (list "/v2/systems/" system-symbol "/waypoints") "")])
     (hash-ref (api-get uri) 'data)))
 
-(define (get-market-details waypoint-id)  
-  (let* (
-         [system-id (extract-system-id waypoint-id)]
-         [uri (string-join (list "/v2/systems/" system-id "/waypoints/" waypoint-id "/market") "")])
+;; View the details of a waypoint.
+(define (get-waypoint system-symbol waypoint-symbol)  
+  (let ([uri (string-join (list "/v2/systems/" system-symbol "/waypoints/" waypoint-symbol) "")])
     (hash-ref (api-get uri) 'data)))
 
-(define (waypoint-has-trait? waypoint-details trait-symbol)
-  (memf (λ (t) (equal? (hash-ref t 'symbol) trait-symbol)) (hash-ref waypoint-details 'traits)))
-
-(define (waypoint-type waypoint-details)
-  (hash-ref waypoint-details 'type))
-
-(define (list-waypoints-with-shipyard system-id)
-  (filter (λ (wp) (waypoint-has-trait? wp "SHIPYARD")) (list-waypoints system-id)))
-
-(define (list-shipyard-ships system-id shipyard-id)
-  (let ([uri (string-join (list "/v2/systems/" system-id "/waypoints/" shipyard-id "/shipyard") "")])
+;; Retrieve imports, exports and exchange data from a marketplace.
+;; Imports can be sold, exports can be purchased, and exchange goods can be purchased or sold.
+;; Send a ship to the waypoint to access trade good prices and recent transactions.
+(define (get-market system-symbol waypoint-symbol)  
+  (let ([uri (string-join
+              (list "/v2/systems/" system-symbol "/waypoints/" waypoint-symbol "/market") "")])
     (hash-ref (api-get uri) 'data)))
-  
-(define (purchase-ship ship-type shipyard-waypoint-symbol)
-  (let ([uri "/v2/my/ships"]
-        [data (hash 'shipType ship-type 'waypointSymbol shipyard-waypoint-symbol)])
-    (api-post uri data 201)))
 
-(define (list-asteroid-field-waypoints system-id)
-  (filter (λ (wp) (equal? (waypoint-type wp) "ASTEROID_FIELD")) (list-waypoints system-id)))
+;; Get the shipyard for a waypoint.
+;; Send a ship to the waypoint to access ships that are currently available for purchase
+;; and recent transactions.
+(define (get-shipyard system-symbol waypoint-symbol)  
+  (let ([uri (string-join
+              (list "/v2/systems/" system-symbol "/waypoints/" waypoint-symbol "/shipyard") "")])
+    (hash-ref (api-get uri) 'data)))
 
-(define (list-marketplace-waypoints system-id)
-  (filter (λ (wp) (waypoint-has-trait? wp "MARKETPLACE")) (list-waypoints system-id)))
+;; Get jump gate details for a waypoint.
+(define (get-jump-gate system-symbol waypoint-symbol)  
+  (let ([uri (string-join
+              (list "/v2/systems/" system-symbol "/waypoints/" waypoint-symbol "/jump-gate") "")])
+    (hash-ref (api-get uri) 'data)))
 
-(define (list-waypoint-market-trade-goods waypoint-id)
-  (hash-ref (get-market-details waypoint-id) 'tradeGoods))
-    
-(define (list-waypoint-market-exports waypoint-id)
-  (hash-ref (get-market-details waypoint-id) 'exports))
-    
-(define (list-waypoint-market-export-symbols waypoint-id)
-  (map (λ (x) (hash-ref x 'symbol)) (list-waypoint-market-exports waypoint-id)))
-    
-  
