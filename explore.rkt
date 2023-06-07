@@ -40,8 +40,9 @@
 (define (list-asteroid-field-waypoints system-id)
   (filter (λ (wp) (equal? (waypoint-type wp) "ASTEROID_FIELD")) (list-waypoints system-id)))
 
-(define (list-marketplace-waypoints system-id)
-  (filter (λ (wp) (waypoint-has-trait? wp "MARKETPLACE")) (list-waypoints system-id)))
+(define (list-marketplace-waypoint-symbols system-id)
+  (map extract-symbol
+       (filter (λ (wp) (waypoint-has-trait? wp "MARKETPLACE")) (list-waypoints system-id))))
 
 (define (list-waypoint-market-trade-goods waypoint-id)
   (hash-ref (get-market waypoint-id) 'tradeGoods))
@@ -51,6 +52,9 @@
     
 (define (list-waypoint-market-export-symbols waypoint-id)
   (map (λ (x) (hash-ref x 'symbol)) (list-waypoint-market-exports waypoint-id)))
+
+(define (display-all-waypoint-markets system-id)
+  (map (λ (mp) (display-market system-id mp)) (list-marketplace-waypoint-symbols system-id)))
 
 (define (ship-status ship-symbol)
   (~> (get-ship ship-symbol)
@@ -145,3 +149,24 @@
 (define (agent-credits)
   (~> (my-agent-details)
       (hash-ref 'credits)))
+
+(define (extract-symbol x)
+  (hash-ref x 'symbol))
+
+(define (display-market system-id waypoint-id)
+  (let* ([market (get-market system-id waypoint-id)]
+         [imports (hash-ref market 'imports)]
+         [exports (hash-ref market 'exports)]
+         [exchange (hash-ref market 'exchange)]
+         [trade-goods (hash-ref market 'tradeGoods #f)])
+    (printf "waypoint: ~s~n" (hash-ref market 'symbol))
+    (printf "    imports: ~s~n" (map extract-symbol imports))
+    (printf "    exports: ~s~n" (map extract-symbol exports))
+    (printf "    exchange: ~s~n" (map extract-symbol exchange))
+    (when trade-goods
+      (printf "    trade goods~n")
+      (for ([tg (in-list trade-goods)])
+        (printf "        ~s: purchase: ~s; sell: ~s~n"
+                (hash-ref tg 'symbol)
+                (hash-ref tg 'purchasePrice)
+                (hash-ref tg 'sellPrice))))))

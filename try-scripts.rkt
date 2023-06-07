@@ -7,6 +7,7 @@
 (require "timestamp.rkt")
 (require "api/agents.rkt")
 (require "api/fleet.rkt")
+(require "api/systems.rkt")
 (require "wait-queue.rkt")
 
 (define (agent-headquarters)
@@ -18,12 +19,48 @@
       (hash-ref 'nav)
       (hash-ref 'waypointSymbol)))
 
+(define (ship-inventory ship-symbol)
+  (~> (get-ship ship-symbol)
+      (hash-ref 'cargo)
+      (hash-ref 'inventory)))
+
+(define (ship-cargo-capacity ship-details)
+  (~> ship-details
+      (hash-ref 'cargo)
+      (hash-ref 'capacity)))
+
+(define (ship-cargo-units ship-details)
+  (~> ship-details
+      (hash-ref 'cargo)
+      (hash-ref 'units)))
+
 (define (nav-result-arrival nav-result)
   (parse-timestamp (~> nav-result
                        (hash-ref 'nav)
                        (hash-ref 'route)
                        (hash-ref 'arrival))))
 
+(define (cooldown-expiration result)
+  (parse-timestamp (~> result
+                       (hash-ref 'cooldown)
+                       (hash-ref 'expiration))))  
+         
+(define (extract-result-capacity extract-result)
+  (~> extract-result
+      (hash-ref 'cargo)
+      (hash-ref 'capacity)))
+         
+(define (extract-result-units extract-result)
+  (~> extract-result
+      (hash-ref 'cargo)
+      (hash-ref 'units)))
+         
+;; return a hash of (symbol . #t) containing all trade goods at the local market
+(define (get-market-trade-goods system-id waypoint-id)    
+  (let ([trade-goods (hash-ref (get-market system-id waypoint-id) 'tradeGoods)])
+    (for/hash ([trade-good-item trade-goods])
+      (values (hash-ref trade-good-item 'symbol) #t))))
+  
 (define (current-utc-date)
   (seconds->date (current-seconds) #f))
 
@@ -39,7 +76,7 @@
 (struct task-result (timestamp op state))
 
 ;; navigate to agent headquarters
-;; then navige to the asteroid field and back
+;; then navigate to the asteroid field and back
 ;; 3 times
 (define (build-navigate-script ship-id asteroid-field)
   (define hq (agent-headquarters))
@@ -79,6 +116,31 @@
                  (task null navigate-to-hq)
                  (task null negotiate-at-hq))))
 
+(define (build-extract-loop-script ship-id source-id system-id market-id)
+  (define navigate-to-source
+    (λ (script-id state) (let ([timestamp (navigate ship-id source-id)])
+                           (task-result timestamp 'increment state)))) 
+  (define navigate-to-market
+    (λ (script-id state) (let ([timestamp (navigate ship-id market-id)])
+                           (task-result timestamp 'increment state)))) 
+  
+  (define extract-from-current-location
+    (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
+                           (printf "remaining capacity ~s~n" remaining-capacity)
+                           (cond
+                             [(zero? remaining-capacity) (task-result timestamp 'increment state)]
+                             [else (task-result timestamp 'extract state)])))) 
+  
+  (define sell-cargo-at-market
+    (λ (script-id state) (let ([timestamp (sell ship-id system-id market-id)])
+                           (task-result timestamp 'increment state)))) 
+  
+  (list->vector (list
+                 (task null navigate-to-source)
+                 (task 'extract extract-from-current-location)
+                 (task null navigate-to-market)
+                 (task null sell-cargo-at-market))))
+
 (define (run-navigate-test)
   (define queue (make-queue))
   (define scripts (make-hash))
@@ -105,6 +167,22 @@
   (queue-push-by-date! queue
                        (current-utc-date)
                        (task-step (script-pos 'negotiate 0) (make-state)))
+
+  (process-queue scripts queue))
+
+(define (run-extract-loop-test)
+  (define ship-id "DRFOGOUT-1")
+  (define system-id "X1-HQ18")
+  (define source-id "X1-HQ18-98695F") ; asteroid field
+  (define market-id "X1-HQ18-89363Z")
+  (define queue (make-queue))
+  (define scripts (make-hash))
+  
+  (hash-set! scripts 'extract (build-extract-loop-script ship-id source-id system-id market-id))
+  
+  (queue-push-by-date! queue
+                       (current-utc-date)
+                       (task-step (script-pos 'extract 0) (make-state)))
 
   (process-queue scripts queue))
 
@@ -176,3 +254,50 @@
   (printf "negotiate contract ~s~n" ship-symbol)
   (let ([result (negotiate-contract ship-symbol)])
     (printf "contract result: ~n~s~n" result)))
+
+;; extract resources from a suitable location
+(define (extract ship-symbol)
+  (let* ([ship-details (get-ship ship-symbol)]
+         [starting-capacity (ship-cargo-capacity ship-details)]
+         [starting-units (ship-cargo-units ship-details)])
+    (cond
+      [(>= starting-units starting-capacity)
+       (values (current-utc-date) 0)]
+      [else
+       (printf "extract resources ~s~n" ship-symbol)
+       (let* ([extract-result (extract-resources ship-symbol)]
+              [expiration (cooldown-expiration extract-result)]
+              [capacity (extract-result-capacity extract-result)]
+              [units (extract-result-units extract-result)]
+              [remaining-capacity (- capacity units)])
+         (values expiration remaining-capacity))])))
+
+(define (extract-total-price sell-result)
+  (~> sell-result
+      (hash-ref 'transaction)
+      (hash-ref 'totalPrice)))
+
+;; sell (or jettison) the ship's cargo
+(define (sell ship-symbol system-id waypoint-id)
+  (dock-ship ship-symbol)
+  
+  (let ([market-trade-goods (get-market-trade-goods system-id waypoint-id)])
+    (for ([item (ship-inventory ship-symbol)])
+      (let ([symbol (hash-ref item 'symbol)]
+            [units (hash-ref item 'units)])
+        (cond
+          [(hash-has-key? market-trade-goods symbol)
+           (let* ([sell-result (sell-cargo ship-symbol symbol units)]
+                  [price (extract-total-price sell-result)])
+             (printf "selling ~s units of ~s for ~s~n" units symbol price))
+           #t]
+          [else 
+           (printf "jettisoning ~s units of ~a~n" units symbol)
+           (jettison-cargo ship-symbol symbol units)
+           #f]))))
+  
+  (refuel-ship ship-symbol)
+  (orbit-ship ship-symbol)
+  
+  (current-utc-date))
+          
