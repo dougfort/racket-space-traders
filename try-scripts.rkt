@@ -78,6 +78,7 @@
   (λ (script-id state) (let ([timestamp (current-utc-date)]
                              [next-count (add1 (hash-ref state 'count 0))]
                              [max-count (hash-ref state 'max-count 1)])
+                         (printf "check-count: next ~s; max ~s~n" next-count max-count)
                          (cond                                
                            [(>= next-count max-count)
                             (task-result timestamp 'increment (hash-set state 'count 0))]
