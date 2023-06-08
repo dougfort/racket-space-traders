@@ -186,7 +186,7 @@
   (define queue (make-queue))
   (define extract-script (build-extract-loop-script ship-id source-id system-id ore-market-id))
   (define scripts (hash 'extract extract-script))
-  (define state (hash 'count 0 'max-count 3))
+  (define state (hash 'count 0 'max-count 10))
   
   (queue-push-by-date! queue
                        (current-utc-date)
