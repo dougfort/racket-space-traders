@@ -10,9 +10,16 @@
 (require "api/systems.rkt")
 (require "wait-queue.rkt")
 
+(define (extract-symbol x)
+  (hash-ref x 'symbol))
+
 (define (agent-headquarters)
   (~> (my-agent-details)
       (hash-ref 'headquarters)))
+
+(define (agent-credits)
+  (~> (my-agent-details)
+      (hash-ref 'credits)))
 
 (define (ship-location ship-symbol)
   (~> (get-ship ship-symbol)
@@ -67,8 +74,15 @@
 (define (increment-current-utc-date amount)
   (seconds->date (+ (current-seconds) amount) #f))
 
-(define (make-state)
-  (hash))
+(define check-count
+  (λ (script-id state) (let ([timestamp (current-utc-date)]
+                             [next-count (add1 (hash-ref state 'count 0))]
+                             [max-count (hash-ref state 'max-count 1)])
+                         (cond                                
+                           [(>= next-count max-count)
+                            (task-result timestamp 'increment (hash-set state 'count 0))]
+                           [else
+                            (task-result timestamp 'repeat (hash-set state 'count next-count))]))))
 
 (struct task (label fn))
 (struct script-pos (id index))
@@ -77,25 +91,14 @@
 
 ;; navigate to agent headquarters
 ;; then navigate to the asteroid field and back
-;; 3 times
 (define (build-navigate-script ship-id asteroid-field)
   (define hq (agent-headquarters))
-  (define max-count 3)
   (define navigate-to-hq
     (λ (script-id state) (let ([timestamp (navigate ship-id hq)])
                            (task-result timestamp 'increment state)))) 
   (define navigate-to-asteroid-field
     (λ (script-id state) (let ([timestamp (navigate ship-id asteroid-field)])
-                           (task-result timestamp 'increment state)))) 
-  (define check-count
-    (λ (script-id state) (let ([timestamp (current-utc-date)]
-                               [next-count (add1 (hash-ref state 'count 0))])
-                           (cond                                
-                             [(>= next-count max-count)
-                              (task-result timestamp 'increment (hash-set state 'count 0))]
-                             [else
-                              (task-result timestamp 'repeat (hash-set state 'count next-count))]))))
-    
+                           (task-result timestamp 'increment state))))     
      
   (list->vector (list
                  (task null navigate-to-hq)
@@ -136,25 +139,27 @@
                            (task-result timestamp 'increment state)))) 
   
   (list->vector (list
-                 (task null navigate-to-source)
+                 (task 'repeat navigate-to-source)
                  (task 'extract extract-from-current-location)
                  (task null navigate-to-market)
-                 (task null sell-cargo-at-market))))
+                 (task null sell-cargo-at-market)
+                 (task null check-count))))
 
 (define (run-navigate-test)
   (define queue (make-queue))
   (define scripts (make-hash))
+  (define state (hash 'count 0 'max-count 3))
   
   (hash-set! scripts 'ship-1-script-id (build-navigate-script "DRFOGOUT-1" "X1-HQ18-98695F"))
   (hash-set! scripts 'ship-2-script-id (build-navigate-script "DRFOGOUT-2" "X1-HQ18-98695F"))
   
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos 'ship-1-script-id 0) (make-state)))
+                       (task-step (script-pos 'ship-1-script-id 0) state))
 
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos 'ship-2-script-id 0) (make-state)))
+                       (task-step (script-pos 'ship-2-script-id 0) state))
 
   (process-queue scripts queue))
 
@@ -166,25 +171,30 @@
   
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos 'negotiate 0) (make-state)))
+                       (task-step (script-pos 'negotiate 0) (hash)))
 
   (process-queue scripts queue))
 
 (define (run-extract-loop-test)
+  (printf "start extract loop test: credits ~s~n" (agent-credits))
+  
   (define ship-id "DRFOGOUT-1")
   (define system-id "X1-HQ18")
   (define source-id "X1-HQ18-98695F") ; asteroid field
   (define market-id "X1-HQ18-89363Z")
+  (define ore-market-id "X1-HQ18-93722X")
   (define queue (make-queue))
-  (define scripts (make-hash))
-  
-  (hash-set! scripts 'extract (build-extract-loop-script ship-id source-id system-id market-id))
+  (define extract-script (build-extract-loop-script ship-id source-id system-id ore-market-id))
+  (define scripts (hash 'extract extract-script))
+  (define state (hash 'count 0 'max-count 3))
   
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos 'extract 0) (make-state)))
+                       (task-step (script-pos 'extract 0) state))
 
-  (process-queue scripts queue))
+  (process-queue scripts queue)
+  
+  (printf "finish extract loop test: credits ~s~n" (agent-credits)))
 
 (define (process-queue scripts queue)
   (cond
@@ -197,8 +207,7 @@
             [script-id (script-pos-id pos)]
             [script-index (script-pos-index pos)]
             [script (hash-ref scripts script-id)])
-       (printf "script-id ~s; script-index ~s; count ~s~n"
-               script-id script-index (hash-ref state 'count 0))
+       (printf "script-id ~s; script-index ~s~n" script-id script-index )
        (cond
          [(>= script-index (vector-length script))
           (printf "end of script ~s~n" script-id)]
@@ -281,8 +290,14 @@
 (define (sell ship-symbol system-id waypoint-id)
   (dock-ship ship-symbol)
   
-  (let ([market-trade-goods (get-market-trade-goods system-id waypoint-id)])
-    (for ([item (ship-inventory ship-symbol)])
+  (let ([market-trade-goods (get-market-trade-goods system-id waypoint-id)]
+        [inventory (ship-inventory ship-symbol)])
+    (printf "trade goods at ~s ~s: ~s\n"
+            system-id
+            waypoint-id
+            (hash-keys market-trade-goods))
+    (printf "inventory: ~s~n" (map extract-symbol inventory))
+    (for ([item (in-list inventory)])
       (let ([symbol (hash-ref item 'symbol)]
             [units (hash-ref item 'units)])
         (cond

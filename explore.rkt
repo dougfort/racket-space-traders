@@ -170,3 +170,6 @@
                 (hash-ref tg 'symbol)
                 (hash-ref tg 'purchasePrice)
                 (hash-ref tg 'sellPrice))))))
+
+(define (display-all-markets system-id)
+  (map (λ (mp) (display-market system-id mp)) (list-marketplace-waypoint-symbols system-id)))
