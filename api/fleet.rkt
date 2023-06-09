@@ -44,7 +44,7 @@
 (define (purchase-ship ship-type waypoint-symbol)
   (let ([uri "/v2/my/ships/"]
         [data (hash 'shipType ship-type 'waypointSymbol waypoint-symbol)])
-    (hash-ref (api-post uri data 201) 'data)))
+    (hash-ref (api-post uri data '(201)) 'data)))
 
 ;; Retrieve the details of your ship.
 (define (get-ship ship-symbol)
@@ -81,7 +81,7 @@
 ;; Charting a location will record your agent as the one who created the chart
 (define (create-chart ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/chart") "")])
-    (hash-ref (api-post uri #f 201) 'data)))
+    (hash-ref (api-post uri #f '(201)) 'data)))
 
 ;; Retrieve the details of your ship's reactor cooldown.
 ;; Some actions such as activating your jump drive, scanning,
@@ -205,7 +205,7 @@
 (define (purchase-cargo ship-symbol cargo-symbol units)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/purchase") "")]
         [data (hash 'symbol cargo-symbol 'units units)])
-    (hash-ref (api-post uri data) 'data)))
+    (hash-ref (api-post uri data '(201)) 'data)))
 
 ;; Transfer cargo between ships.
 (define (transfer-cargo ship-symbol cargo-symbol units dest-ship)

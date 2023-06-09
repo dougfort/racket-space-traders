@@ -173,3 +173,9 @@
 
 (define (display-all-markets system-id)
   (map (λ (mp) (display-market system-id mp)) (list-marketplace-waypoint-symbols system-id)))
+
+(define (display-ship ship)
+  (printf "name: ~s; type: ~s; price: ~s~n"
+          (hash-ref ship 'name)
+          (hash-ref ship 'type)
+          (hash-ref ship 'purchasePrice)))
