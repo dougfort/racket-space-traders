@@ -6,10 +6,18 @@
 (require json)
 (require "access.rkt")
 
-(provide api-get api-post api-patch)
+(provide limit-query-string api-get api-post api-patch)
 
 (define http-too-many-requests 429)
 (define retry-delay 1)
+
+;; return HTTP query string from limited queries
+;; "?limit=<limit>&page=<page>
+;; or "" if limt is zero
+(define (limit-query-string limit page)
+  (cond
+    [(zero? limit) ""]
+    [else (format "?limit=~s&page=~s" limit page)]))
 
 ;; looking for '("HTTP/1.1" "200" "OK")
 ;; returning (status reason)

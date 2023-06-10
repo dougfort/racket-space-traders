@@ -10,8 +10,12 @@
 (require "http.rkt")
 
 ;; List all discovered factions in the game.
-(define (list-factions)
-  (hash-ref (api-get "/v2/factions") 'data))
+;; limit 0 means use the system defaults
+(define (list-factions [limit 0] [page 1])
+  (let* ([path "/v2/factions"]
+         [query (limit-query-string limit page)]
+         [uri (string-join (list path query) "")])
+  (hash-ref (api-get uri) 'data)))
 
 ;; View the details of a faction.
 (define (get-faction faction-symbol)

@@ -37,8 +37,12 @@
 (require "http.rkt")
 
 ;; Retrieve all of your ships.
-(define (list-ships)
-  (hash-ref (api-get "/v2/my/ships") 'data))
+;; limit 0 means use the system defaults
+(define (list-ships [limit 0] [page 1])
+  (let* ([path "/v2/my/ships"]
+         [query (limit-query-string limit page)]
+         [uri (string-join (list path query) "")])
+  (hash-ref (api-get uri) 'data)))
 
 ;; Purchase a ship
 (define (purchase-ship ship-type waypoint-symbol)
