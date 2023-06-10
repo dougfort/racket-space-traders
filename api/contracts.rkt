@@ -14,9 +14,12 @@
 (require "http.rkt")
 
 ;; List all of your contracts.
+;; limit 0 means use the system defaults
 (define (list-contracts [limit 10] [page 1])
-  ;; TODO: implement parameters
-  (hash-ref (api-get "/v2/my/contracts") 'data))
+  (let* ([path "/v2/my/contracts"]
+         [query (limit-query-string limit page)]
+         [uri (string-join (list path query) "")])
+  (hash-ref (api-get uri) 'data)))
 
 ;; Get the details of a contract by ID.
 (define (get-contract contract-id)

@@ -16,8 +16,11 @@
 (require "http.rkt")
 
 ;; Return a list of all systems.
-(define (list-systems)
-  (let ([uri "/v2/systems"])
+;; limit 0 means use the system defaults
+(define (list-systems [limit 0] [page 1])
+  (let* ([path "/v2/systems"]
+         [query (limit-query-string limit page)]
+         [uri (string-join (list path query) "")])
     (hash-ref (api-get uri) 'data)))
 
 ;; Get the details of a system.
@@ -27,8 +30,10 @@
 
 ;; Fetch all of the waypoints for a given system.
 ;; System must be charted or a ship must be present to return waypoint details.
-(define (list-waypoints system-symbol)
-  (let ([uri (string-join (list "/v2/systems/" system-symbol "/waypoints") "")])
+(define (list-waypoints system-symbol [limit 0] [page 1])
+  (let* ([path (string-join (list "/v2/systems/" system-symbol "/waypoints") "")]
+         [query (limit-query-string limit page)]
+         [uri (string-join (list path query) "")])
     (hash-ref (api-get uri) 'data)))
 
 ;; View the details of a waypoint.
