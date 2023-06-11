@@ -42,23 +42,23 @@
   (let* ([path "/v2/my/ships"]
          [query (limit-query-string limit page)]
          [uri (string-join (list path query) "")])
-  (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Purchase a ship
 (define (purchase-ship ship-type waypoint-symbol)
   (let ([uri "/v2/my/ships/"]
         [data (hash 'shipType ship-type 'waypointSymbol waypoint-symbol)])
-    (hash-ref (api-post uri data '(201)) 'data)))
+    (api-post uri data '(201))))
 
 ;; Retrieve the details of your ship.
 (define (get-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol) "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Retrieve the cargo of your ship.
 (define (get-ship-cargo ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/cargo") "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Attempt to move your ship into orbit at it's current location.
 ;;
@@ -68,14 +68,14 @@
 ;; The endpoint is idempotent - successive calls will succeed even if the ship is already in orbit.
 (define (orbit-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/orbit") "")])
-    (hash-ref (api-post uri #f) 'data)))
+    (api-post uri #f)))
 
 ;; Attempt to refine the raw materials on your ship.
 ;; The request will only succeed if your ship is capable of refining at the time of the request.
 (define (ship-refine ship-symbol material)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/refine") "")]
         [data (hash 'produce material)])
-    (hash-ref (api-post uri data) 'data)))
+    (api-post uri data)))
 
 ;; Command a ship to chart the current waypoint.
 ;;
@@ -85,7 +85,7 @@
 ;; Charting a location will record your agent as the one who created the chart
 (define (create-chart ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/chart") "")])
-    (hash-ref (api-post uri #f '(201)) 'data)))
+    (api-post uri #f '(201))))
 
 ;; Retrieve the details of your ship's reactor cooldown.
 ;; Some actions such as activating your jump drive, scanning,
@@ -98,7 +98,7 @@
 ;; Response returns a 204 status code (no-content) when the ship has no cooldown.
 (define (get-ship-cooldown ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/cooldown") "")])
-    (hash-ref (api-get uri '(200 204)) 'data)))
+    (api-get uri '(200 204))))
 
 ;; Attempt to dock your ship at it's current location.
 ;; Docking will only succeed if the waypoint is a dockable location,
@@ -107,7 +107,7 @@
 ;; The endpoint is idempotent - successive calls will succeed even if the ship is already docked.
 (define (dock-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/dock") "")])
-    (hash-ref (api-post uri #f) 'data)))
+    (api-post uri #f)))
 
 ;; If you want to target specific yields for an extraction, you can survey a waypoint,
 ;; such as an asteroid field, and send the survey in the body of the extract request.
@@ -119,20 +119,20 @@
 ;; Multiple ships can use the same survey for extraction.
 (define (create-survey ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/survey") "")])
-    (hash-ref (api-post uri #f '(201)) 'data)))
+    (api-post uri #f '(201))))
 
 ;; Extract resources from the waypoint into your ship.
 ;; Send an optional survey as the payload to target specific yields.
 (define (extract-resources ship-symbol [survey #f])
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/extract") "")]
         [data (if survey (hash 'survey survey) #f)])
-    (hash-ref (api-post uri data '(201)) 'data)))
+    (api-post uri data '(201))))
 
 ;; Jettison cargo from your ship's cargo hold.
 (define (jettison-cargo ship-symbol cargo-symbol units)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/jettison") "")]
         [data (hash 'symbol cargo-symbol 'units units)])
-    (hash-ref (api-post uri data) 'data)))
+    (api-post uri data)))
 
 ;; Jump your ship instantly to a target system.
 ;; When used while in orbit or docked to a jump gate waypoint, any ship can use this command.
@@ -141,7 +141,7 @@
 (define (jump-ship ship-symbol system-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/jump") "")]
         [data (hash 'systemSymbol system-symbol)])
-    (hash-ref (api-post uri data) 'data)))
+    (api-post uri data)))
 
 ;; Navigate to a target destination.
 ;; The destination must be located within the same system as the ship.
@@ -155,18 +155,18 @@
 (define (navigate-ship ship-symbol waypoint-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/navigate") "")]
         [data (hash 'waypointSymbol waypoint-symbol)])
-    (hash-ref (api-post uri data) 'data)))
+    (api-post uri data)))
 
 ;; Update the nav data of a ship, such as the flight mode.
 (define (patch-ship-nav ship-symbol flight-mode)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/nav") "")]
         [data (hash 'flightMode flight-mode)])
-    (hash-ref (api-patch uri data) 'data)))
+    (api-patch uri data)))
 
 ;; Get the current nav status of a ship.
 (define (get-ship-nav ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/nav") "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Warp your ship to a target destination in another system.
 ;; Warping will consume the necessary fuel and supplies from the ship's manifest,
@@ -177,65 +177,65 @@
 (define (warp-ship ship-symbol waypoint-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/warp") "")]
         [data (hash 'waypointSymbol waypoint-symbol)])
-    (hash-ref (api-post uri data) 'data)))
+    (api-post uri data)))
 
 ;; Sell cargo.
 (define (sell-cargo ship-symbol cargo-symbol units)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/sell") "")]
         [data (hash 'symbol cargo-symbol 'units units)])
-    (hash-ref (api-post uri data '(201)) 'data)))
+    (api-post uri data '(201))))
 
 ;; Activate your ship's sensor arrays to scan for system information.
 (define (scan-systems ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/scan/systems") "")])
-    (hash-ref (api-post uri #f '(201)) 'data)))
+    (api-post uri #f '(201))))
 
 ;; Activate your ship's sensor arrays to scan for system information.
 (define (scan-waypoints ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/scan/waypoints") "")])
-    (hash-ref (api-post uri #f '(201)) 'data)))
+    (api-post uri #f '(201))))
 
 ;; Activate your ship's sensor arrays to scan for ship information.
 (define (scan-ships ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/scan/ships") "")])
-    (hash-ref (api-post uri #f '(201)) 'data)))
+    (api-post uri #f '(201))))
 
 ;; Refuel your ship from the local market.
 (define (refuel-ship ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/refuel") "")])
-    (hash-ref (api-post uri #f) 'data)))
+    (api-post uri #f)))
 
 ;; Purchase cargo.
 (define (purchase-cargo ship-symbol cargo-symbol units)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/purchase") "")]
         [data (hash 'symbol cargo-symbol 'units units)])
-    (hash-ref (api-post uri data '(201)) 'data)))
+    (api-post uri data '(201))))
 
 ;; Transfer cargo between ships.
 (define (transfer-cargo ship-symbol cargo-symbol units dest-ship)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/purchase") "")]
         [data (hash 'symbol cargo-symbol 'units units 'shipSymbol dest-ship)])
-    (hash-ref (api-post uri data) 'data)))
+    (api-post uri data)))
 
 ;; Negotiate a contract
 (define (negotiate-contract ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/negotiate/contract") "")])
     ;; 2023-06-04 dougfort -- the docs say 201, I get 200
-    (hash-ref (api-post uri #f '(200 201)) 'data)))
+    (hash-ref (api-post uri #f '(200 201)))))
 
 ;; Get the mounts on a ship.
 (define (get-mounts ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/mounts") "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Install a mount on a ship.
 (define (install-mount ship-symbol mount-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/mounts/install") "")]
         [data (hash 'symbol mount-symbol)])
-    (hash-ref (api-post uri data '(201)) 'data)))
+    (api-post uri data '(201))))
 
 ;; Remove a mount from a ship.
 (define (remove-mount ship-symbol mount-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/mounts/remove") "")]
         [data (hash 'symbol mount-symbol)])
-    (hash-ref (api-post uri data '(201)) 'data)))
+    (api-post uri data '(201))))
