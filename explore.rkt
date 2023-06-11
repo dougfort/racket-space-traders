@@ -14,19 +14,14 @@
 (define (extract-system-id waypoint-id)
   (string-join (take (string-split waypoint-id "-") 2) "-"))
 
-;; run a 'paged' function like 'list-systems' or 'list-ships'
-(define (traverse-pages fn limit start-page)
-  ;; 
-  
-
 (define (list-system-by-key key)
   (map (λ (s) (hash-ref s key)) (list-systems)))
 
 (define (list-waypoint-symbols system-id)
-  (map (λ (wp) (hash-ref wp 'symbol)) (list-waypoints system-id)))
+  (map (λ (wp) (hash-ref wp 'symbol)) (list-waypoints-in-system system-id)))
 
 (define (list-waypoints-traits system-id)
-  (for ([wp (list-waypoints system-id)])
+  (for ([wp (list-waypoints-in-system system-id)])
     (printf "symbol: ~a; type: ~a~n" (hash-ref wp 'symbol) (hash-ref wp 'type))
     (for ([t (hash-ref wp 'traits)])
       (printf "    ~a~n" (hash-ref t 'symbol)))))
@@ -38,14 +33,14 @@
   (hash-ref waypoint-details 'type))
 
 (define (list-waypoints-with-shipyard system-id)
-  (filter (λ (wp) (waypoint-has-trait? wp "SHIPYARD")) (list-waypoints system-id)))
+  (filter (λ (wp) (waypoint-has-trait? wp "SHIPYARD")) (list-waypoints-in-system system-id)))
 
 (define (list-asteroid-field-waypoints system-id)
-  (filter (λ (wp) (equal? (waypoint-type wp) "ASTEROID_FIELD")) (list-waypoints system-id)))
+  (filter (λ (wp) (equal? (waypoint-type wp) "ASTEROID_FIELD")) (list-waypoints-in-system system-id)))
 
 (define (list-marketplace-waypoint-symbols system-id)
   (map extract-symbol
-       (filter (λ (wp) (waypoint-has-trait? wp "MARKETPLACE")) (list-waypoints system-id))))
+       (filter (λ (wp) (waypoint-has-trait? wp "MARKETPLACE")) (list-waypoints-in-system system-id))))
 
 (define (list-waypoint-market-trade-goods waypoint-id)
   (hash-ref (get-market waypoint-id) 'tradeGoods))
@@ -145,12 +140,14 @@
                        (hash-ref 'deliver))])
     (findf (λ (d) (equal? (hash-ref d 'tradeSymbol) trade-symbol)) deliverables)))
                       
-(define (agent-headquarters)
-  (~> (my-agent-details)
+(define (agent-headquarters agent-details)
+  (~> agent-details
+      (hash-ref 'data)
       (hash-ref 'headquarters)))
 
-(define (agent-credits)
-  (~> (my-agent-details)
+(define (agent-credits agent-details)
+  (~> agent-details
+      (hash-ref 'data)
       (hash-ref 'credits)))
 
 (define (extract-symbol x)

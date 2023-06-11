@@ -209,7 +209,7 @@
 
   (process-queue scripts queue)
   
-  (printf "finish extract loop test: credits ~s~n" (agent-credits)))
+  (printf "finish extract loop test: credits ~s~n" (agent-credits (get-agent))))
 
 (define (process-queue scripts queue)
   (cond
@@ -298,6 +298,7 @@
 
 (define (extract-total-price sell-result)
   (~> sell-result
+      (hash-ref 'data)
       (hash-ref 'transaction)
       (hash-ref 'totalPrice)))
 
@@ -306,7 +307,7 @@
   (dock-ship ship-symbol)
   
   (let ([market-trade-goods (get-market-trade-goods system-id waypoint-id)]
-        [inventory (ship-inventory ship-symbol)])
+        [inventory (ship-inventory (get-ship ship-symbol))])
     (printf "trade goods at ~s ~s: ~s\n"
             system-id
             waypoint-id
