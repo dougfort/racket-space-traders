@@ -6,6 +6,7 @@
 (require racket/date)
 (require "timestamp.rkt")
 (require "api/agents.rkt")
+(require "api/factions.rkt")
 (require "api/fleet.rkt")
 (require "api/systems.rkt")
 (require "wait-queue.rkt")
@@ -13,58 +14,71 @@
 (define (extract-symbol x)
   (hash-ref x 'symbol))
 
-(define (agent-headquarters)
-  (~> (my-agent-details)
+(define (agent-headquarters agent-details)
+  (~> agent-details
+      (hash-ref 'data)
       (hash-ref 'headquarters)))
 
-(define (agent-credits)
-  (~> (my-agent-details)
+(define (agent-credits agent-details)
+  (~> agent-details
+      (hash-ref 'data)
       (hash-ref 'credits)))
 
-(define (ship-location ship-symbol)
-  (~> (get-ship ship-symbol)
+(define (ship-location ship-details)
+  (~> ship-details
+      (hash-ref 'data)
       (hash-ref 'nav)
       (hash-ref 'waypointSymbol)))
 
-(define (ship-inventory ship-symbol)
-  (~> (get-ship ship-symbol)
+(define (ship-inventory ship-details)
+  (~> ship-details
+      (hash-ref 'data)
       (hash-ref 'cargo)
       (hash-ref 'inventory)))
 
 (define (ship-cargo-capacity ship-details)
   (~> ship-details
+      (hash-ref 'data)
       (hash-ref 'cargo)
       (hash-ref 'capacity)))
 
 (define (ship-cargo-units ship-details)
   (~> ship-details
+      (hash-ref 'data)
       (hash-ref 'cargo)
       (hash-ref 'units)))
 
 (define (nav-result-arrival nav-result)
   (parse-timestamp (~> nav-result
+                       (hash-ref 'data)
                        (hash-ref 'nav)
                        (hash-ref 'route)
                        (hash-ref 'arrival))))
 
 (define (cooldown-expiration result)
   (parse-timestamp (~> result
+                       (hash-ref 'data)
                        (hash-ref 'cooldown)
                        (hash-ref 'expiration))))  
          
 (define (extract-result-capacity extract-result)
   (~> extract-result
+      (hash-ref 'data)
       (hash-ref 'cargo)
       (hash-ref 'capacity)))
          
 (define (extract-result-units extract-result)
   (~> extract-result
+      (hash-ref 'data)
       (hash-ref 'cargo)
       (hash-ref 'units)))
          
 ;; return a hash of (symbol . #t) containing all trade goods at the local market
 (define (get-market-trade-goods system-id waypoint-id)    
-  (let ([trade-goods (hash-ref (get-market system-id waypoint-id) 'tradeGoods)])
+  (let* ([market-details (get-market system-id waypoint-id)]
+         [trade-goods (~> market-details
+                          (hash-ref 'data)
+                          (hash-ref'tradeGoods))])
     (for/hash ([trade-good-item trade-goods])
       (values (hash-ref trade-good-item 'symbol) #t))))
   
@@ -177,13 +191,13 @@
   (process-queue scripts queue))
 
 (define (run-extract-loop-test)
-  (printf "start extract loop test: credits ~s~n" (agent-credits))
+  (printf "start extract loop test: credits ~s~n" (agent-credits (get-agent)))
   
   (define ship-id "DRFOGOUT-1")
-  (define system-id "X1-HQ18")
-  (define source-id "X1-HQ18-98695F") ; asteroid field
+  (define system-id "X1-KS52")
+  (define source-id "X1-KS52-51225B") ; asteroid field
   (define market-id "X1-HQ18-89363Z")
-  (define ore-market-id "X1-HQ18-93722X")
+  (define ore-market-id "X1-KS52-61262Z")
   (define queue (make-queue))
   (define extract-script (build-extract-loop-script ship-id source-id system-id ore-market-id))
   (define scripts (hash 'extract extract-script))
@@ -245,7 +259,7 @@
   (orbit-ship ship-symbol)
   
   (printf "navigate ~s ~s~n" ship-symbol destination-symbol)
-  (let ([current-location (ship-location ship-symbol)])
+  (let ([current-location (ship-location (get-ship ship-symbol))])
     (cond
       [(equal? current-location destination-symbol)
        ;; wait for a second to avoid triggering API limits

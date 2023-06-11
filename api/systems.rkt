@@ -21,12 +21,12 @@
   (let* ([path "/v2/systems"]
          [query (limit-query-string limit page)]
          [uri (string-join (list path query) "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Get the details of a system.
 (define (get-system system-symbol)  
   (let ([uri (string-join (list "/v2/systems/" system-symbol) "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Fetch all of the waypoints for a given system.
 ;; System must be charted or a ship must be present to return waypoint details.
@@ -34,12 +34,12 @@
   (let* ([path (string-join (list "/v2/systems/" system-symbol "/waypoints") "")]
          [query (limit-query-string limit page)]
          [uri (string-join (list path query) "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; View the details of a waypoint.
 (define (get-waypoint system-symbol waypoint-symbol)  
   (let ([uri (string-join (list "/v2/systems/" system-symbol "/waypoints/" waypoint-symbol) "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Retrieve imports, exports and exchange data from a marketplace.
 ;; Imports can be sold, exports can be purchased, and exchange goods can be purchased or sold.
@@ -47,7 +47,7 @@
 (define (get-market system-symbol waypoint-symbol)  
   (let ([uri (string-join
               (list "/v2/systems/" system-symbol "/waypoints/" waypoint-symbol "/market") "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Get the shipyard for a waypoint.
 ;; Send a ship to the waypoint to access ships that are currently available for purchase
@@ -55,11 +55,11 @@
 (define (get-shipyard system-symbol waypoint-symbol)  
   (let ([uri (string-join
               (list "/v2/systems/" system-symbol "/waypoints/" waypoint-symbol "/shipyard") "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Get jump gate details for a waypoint.
 (define (get-jump-gate system-symbol waypoint-symbol)  
   (let ([uri (string-join
               (list "/v2/systems/" system-symbol "/waypoints/" waypoint-symbol "/jump-gate") "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 

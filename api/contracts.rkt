@@ -19,12 +19,12 @@
   (let* ([path "/v2/my/contracts"]
          [query (limit-query-string limit page)]
          [uri (string-join (list path query) "")])
-  (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Get the details of a contract by ID.
 (define (get-contract contract-id)
   (let ([uri (string-join (list "/v2/my/contracts/" contract-id) "")])
-    (hash-ref (api-get uri) 'data)))
+    (api-get uri)))
 
 ;; Accept a contract.
 (define (accept-contract contract-id)
@@ -35,11 +35,10 @@
 (define (deliver-contract contract-id ship-symbol cargo-symbol units)
   (let ([uri (string-join (list "/v2/my/contracts/" contract-id "/deliver") "")]
         [data (hash 'shipSymbol ship-symbol 'tradeSymbol cargo-symbol 'units units)])
-    (hash-ref (api-post uri data) 'data))) 
+    (api-post uri data))) 
 
 ;; Fulfill a contract
 (define (fulfill-contract contract-id)
   (let ([uri (string-join (list "/v2/my/contracts/" contract-id "/fulfill") "")])
-    (hash-ref (api-post uri #f) 'data))) 
+    (api-post uri #f))) 
 
-                       

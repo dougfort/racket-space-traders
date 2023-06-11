@@ -8,13 +8,16 @@
 (require "api/fleet.rkt")
 (require "api/contracts.rkt")
 (require "api/agents.rkt")
-
-(provide
- extract-system-id)
+(require "api/factions.rkt")
 
 ;; extract system id from (current) waypoint-id
 (define (extract-system-id waypoint-id)
   (string-join (take (string-split waypoint-id "-") 2) "-"))
+
+;; run a 'paged' function like 'list-systems' or 'list-ships'
+(define (traverse-pages fn limit start-page)
+  ;; 
+  
 
 (define (list-system-by-key key)
   (map (λ (s) (hash-ref s key)) (list-systems)))
@@ -179,3 +182,6 @@
           (hash-ref ship 'name)
           (hash-ref ship 'type)
           (hash-ref ship 'purchasePrice)))
+
+(define (list-recruiting-factions)
+  (map extract-symbol (filter (λ (f) (hash-ref f 'isRecruiting)) (list-factions))))

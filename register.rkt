@@ -7,6 +7,16 @@
 
 (define callsign "DRFOGOUT")
 (define faction "COSMIC")
+(define available-factions '("COSMIC"
+                             "VOID"
+                             "GALACTIC"
+                             "QUANTUM"
+                             "DOMINION"
+                             "ASTRO"
+                             "CORSAIRS"
+                             "OBSIDIAN"
+                             "AEGIS"
+                             "UNITED"))
 (define email "doug.fort@gmail.com")
 (define expected-status 201)
 
