@@ -10,8 +10,10 @@
 (require "api/agents.rkt")
 (require "api/factions.rkt")
 (require "api/wrappers.rkt")
+(require "lenses/all.rkt")
 (require "lenses/waypoint.rkt")
 (require "lenses/ship.rkt")
+(require "lenses/shipyard-ship.rkt")
 
 (define (list-system-by-key key)
   (map (λ (s) (hash-ref s key)) (list-systems)))
@@ -56,6 +58,16 @@
 
 (define (display-all-waypoint-markets system-id)
   (map (λ (mp) (display-market system-id mp)) (list-marketplace-waypoint-symbols system-id)))
+
+(define (display-shipyard-ship details)
+  (printf "~s; ~s; ~s~n"
+          (shipyard-ship-type details)
+          (shipyard-ship-purchase-price details)
+          (shipyard-ship-name details)))
+
+(define (display-shipyard-ships shipyard)
+  (for ([ship (in-list (hash-ref shipyard 'ships))])
+    (display-shipyard-ship ship)))
 
 (define (extract-result-capacity extract-result)
   (~> extract-result
@@ -107,29 +119,16 @@
                        (hash-ref 'deliver))])
     (findf (λ (d) (equal? (hash-ref d 'tradeSymbol) trade-symbol)) deliverables)))
                       
-(define (agent-headquarters agent-details)
-  (~> agent-details
-      (hash-ref 'data)
-      (hash-ref 'headquarters)))
-
-(define (agent-credits agent-details)
-  (~> agent-details
-      (hash-ref 'data)
-      (hash-ref 'credits)))
-
-(define (extract-symbol x)
-  (hash-ref x 'symbol))
-
 (define (display-market system-id waypoint-id)
-  (let* ([market (get-market system-id waypoint-id)]
+  (let* ([market (data (get-market system-id waypoint-id))]
          [imports (hash-ref market 'imports)]
          [exports (hash-ref market 'exports)]
          [exchange (hash-ref market 'exchange)]
          [trade-goods (hash-ref market 'tradeGoods #f)])
     (printf "waypoint: ~s~n" (hash-ref market 'symbol))
-    (printf "    imports: ~s~n" (map extract-symbol imports))
-    (printf "    exports: ~s~n" (map extract-symbol exports))
-    (printf "    exchange: ~s~n" (map extract-symbol exchange))
+    (printf "    imports: ~s~n" (map symbol imports))
+    (printf "    exports: ~s~n" (map symbol exports))
+    (printf "    exchange: ~s~n" (map symbol exchange))
     (when trade-goods
       (printf "    trade goods~n")
       (for ([tg (in-list trade-goods)])
@@ -141,11 +140,5 @@
 (define (display-all-markets system-id)
   (map (λ (mp) (display-market system-id mp)) (list-marketplace-waypoint-symbols system-id)))
 
-(define (display-ship ship)
-  (printf "name: ~s; type: ~s; price: ~s~n"
-          (hash-ref ship 'name)
-          (hash-ref ship 'type)
-          (hash-ref ship 'purchasePrice)))
-
 (define (list-recruiting-factions)
-  (map extract-symbol (filter (λ (f) (hash-ref f 'isRecruiting)) (list-factions))))
+  (map symbol (filter (λ (f) (hash-ref f 'isRecruiting)) (list-factions))))

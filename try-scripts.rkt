@@ -135,13 +135,12 @@
 
   (process-queue scripts queue))
 
-(define (run-extract-loop-test)
+(define (run-extract-loop-test [ship-id "DRFOGOUT-3"])
   (printf "start extract loop test: credits ~s~n" (agent-credits (data (get-agent))))
   
-  (define ship-id "DRFOGOUT-1")
   (define system-id "X1-KS52")
   (define source-id "X1-KS52-51225B") ; asteroid field
-  (define market-id "X1-HQ18-89363Z")
+  (define precious-ore-market-id "X1-KS52-25044Z")
   (define ore-market-id "X1-KS52-61262Z")
   (define queue (make-queue))
   (define extract-script (build-extract-loop-script ship-id source-id system-id ore-market-id))
