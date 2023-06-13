@@ -9,86 +9,53 @@
 (require "api/contracts.rkt")
 (require "api/agents.rkt")
 (require "api/factions.rkt")
-
-;; extract system id from (current) waypoint-id
-(define (extract-system-id waypoint-id)
-  (string-join (take (string-split waypoint-id "-") 2) "-"))
+(require "api/wrappers.rkt")
+(require "lenses/waypoint.rkt")
+(require "lenses/ship.rkt")
 
 (define (list-system-by-key key)
   (map (λ (s) (hash-ref s key)) (list-systems)))
 
 (define (list-waypoint-symbols system-id)
-  (map (λ (wp) (hash-ref wp 'symbol)) (list-waypoints-in-system system-id)))
+  (map waypoint-symbol (data (list-waypoints-in-system system-id))))
 
-(define (list-waypoints-traits system-id)
-  (for ([wp (list-waypoints-in-system system-id)])
-    (printf "symbol: ~a; type: ~a~n" (hash-ref wp 'symbol) (hash-ref wp 'type))
-    (for ([t (hash-ref wp 'traits)])
+(define (display-waypoint-traits system-id)
+  (for ([wp (data (list-waypoints-in-system system-id))])
+    (printf "symbol: ~a; type: ~a~n" (waypoint-symbol wp) (waypoint-type wp))
+    (for ([t (waypoint-traits wp)])
       (printf "    ~a~n" (hash-ref t 'symbol)))))
 
+;; return the nammed trait or #f
+;; intended to be used as a predicate
 (define (waypoint-has-trait? waypoint-details trait-symbol)
-  (memf (λ (t) (equal? (hash-ref t 'symbol) trait-symbol)) (hash-ref waypoint-details 'traits)))
-
-(define (waypoint-type waypoint-details)
-  (hash-ref waypoint-details 'type))
+  (findf (λ (t) (equal? (waypoint-symbol t) trait-symbol)) (waypoint-traits waypoint-details)))
 
 (define (list-waypoints-with-shipyard system-id)
-  (filter (λ (wp) (waypoint-has-trait? wp "SHIPYARD")) (list-waypoints-in-system system-id)))
+  (map waypoint-symbol
+       (filter (λ (wp) (waypoint-has-trait? wp "SHIPYARD"))
+               (data (list-waypoints-in-system system-id)))))
 
 (define (list-asteroid-field-waypoints system-id)
-  (filter (λ (wp) (equal? (waypoint-type wp) "ASTEROID_FIELD")) (list-waypoints-in-system system-id)))
+  (map waypoint-symbol
+       (filter (λ (wp) (equal? (waypoint-type wp) "ASTEROID_FIELD"))
+               (data (list-waypoints-in-system system-id)))))
 
 (define (list-marketplace-waypoint-symbols system-id)
-  (map extract-symbol
-       (filter (λ (wp) (waypoint-has-trait? wp "MARKETPLACE")) (list-waypoints-in-system system-id))))
+  (map waypoint-symbol
+       (filter (λ (wp) (waypoint-has-trait? wp "MARKETPLACE"))
+               (data (list-waypoints-in-system system-id)))))
 
 (define (list-waypoint-market-trade-goods waypoint-id)
   (hash-ref (get-market waypoint-id) 'tradeGoods))
     
-(define (list-waypoint-market-exports waypoint-id)
-  (hash-ref (get-market (extract-system-id waypoint-id) waypoint-id) 'exports))
+(define (list-waypoint-market-exports system-id waypoint-id)
+  (hash-ref (get-market system-id waypoint-id) 'exports))
     
 (define (list-waypoint-market-export-symbols waypoint-id)
   (map (λ (x) (hash-ref x 'symbol)) (list-waypoint-market-exports waypoint-id)))
 
 (define (display-all-waypoint-markets system-id)
   (map (λ (mp) (display-market system-id mp)) (list-marketplace-waypoint-symbols system-id)))
-
-(define (ship-status ship-symbol)
-  (~> (get-ship ship-symbol)
-      (hash-ref 'nav)
-      (hash-ref 'status)))
-
-(define (ship-location ship-symbol)
-  (~> (get-ship ship-symbol)
-      (hash-ref 'nav)
-      (hash-ref 'waypointSymbol)))
-
-(define (ship-inventory ship-symbol)
-  (~> (get-ship ship-symbol)
-      (hash-ref 'cargo)
-      (hash-ref 'inventory)))
-
-(define (ship-inventory-units inventory trade-symbol)
-  (for/or ([item inventory])
-    (cond
-      [(equal? (hash-ref item 'symbol) trade-symbol) (hash-ref item 'units)]
-      [else #f])))
-
-(define (ship-cargo-capacity ship-symbol)
-  (~> (get-ship ship-symbol)
-      (hash-ref 'cargo)
-      (hash-ref 'capacity)))
-
-(define (ship-cargo-units ship-symbol)
-  (~> (get-ship ship-symbol)
-      (hash-ref 'cargo)
-      (hash-ref 'units)))
-
-(define (ship-current-fuel ship-symbol)
-  (~> (get-ship ship-symbol)
-      (hash-ref 'fuel)
-      (hash-ref 'current)))
 
 (define (extract-result-capacity extract-result)
   (~> extract-result
