@@ -23,7 +23,7 @@
   (let* ([market-details (get-market system-id waypoint-id)]
          [trade-goods (~> market-details
                           (hash-ref 'data)
-                          (hash-ref'tradeGoods))])
+                          (hash-ref 'tradeGoods '()))])
     (for/hash ([trade-good-item trade-goods])
       (values (hash-ref trade-good-item 'symbol) #t))))
   
@@ -253,7 +253,7 @@
   (dock-ship ship-symbol)
   
   (let ([market-trade-goods (get-market-trade-goods system-id waypoint-id)]
-        [inventory (ship-inventory (get-ship ship-symbol))])
+        [inventory (ship-inventory (data (get-ship ship-symbol)))])
     (printf "trade goods at ~s ~s: ~s\n"
             system-id
             waypoint-id
