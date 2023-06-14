@@ -79,12 +79,16 @@
                  (task null navigate-to-hq)
                  (task null negotiate-at-hq))))
 
-(define (build-extract-loop-script ship-id source-id system-id market-id)
+(define (build-extract-loop-script ship-id source-id system-id market-id-1 market-id-2)
   (define navigate-to-source
     (λ (script-id state) (let ([timestamp (navigate ship-id source-id)])
                            (task-result timestamp 'increment state)))) 
-  (define navigate-to-market
-    (λ (script-id state) (let ([timestamp (navigate ship-id market-id)])
+  (define navigate-to-market-1
+    (λ (script-id state) (let ([timestamp (navigate ship-id market-id-1)])
+                           (task-result timestamp 'increment state)))) 
+  
+  (define navigate-to-market-2
+    (λ (script-id state) (let ([timestamp (navigate ship-id market-id-2)])
                            (task-result timestamp 'increment state)))) 
   
   (define extract-from-current-location
@@ -94,15 +98,26 @@
                              [(zero? remaining-capacity) (task-result timestamp 'increment state)]
                              [else (task-result timestamp 'extract state)])))) 
   
-  (define sell-cargo-at-market
-    (λ (script-id state) (let ([timestamp (sell ship-id system-id market-id)])
+  (define sell-cargo-at-market-1
+    (λ (script-id state) (let ([timestamp (sell ship-id system-id market-id-1)])
+                           (task-result timestamp 'increment state)))) 
+  
+  (define sell-cargo-at-market-2
+    (λ (script-id state) (let ([timestamp (sell ship-id system-id market-id-2)])
+                           (task-result timestamp 'increment state)))) 
+  
+  (define jettison-all-cargo
+    (λ (script-id state) (let ([timestamp (jettison ship-id)])
                            (task-result timestamp 'increment state)))) 
   
   (list->vector (list
                  (task 'repeat navigate-to-source)
+                 (task null jettison-all-cargo)
                  (task 'extract extract-from-current-location)
-                 (task null navigate-to-market)
-                 (task null sell-cargo-at-market)
+                 (task null navigate-to-market-1)
+                 (task null sell-cargo-at-market-1)
+                 (task null navigate-to-market-2)
+                 (task null sell-cargo-at-market-2)
                  (task null check-count))))
 
 (define (run-navigate-test)
@@ -143,7 +158,11 @@
   (define precious-ore-market-id "X1-KS52-25044Z")
   (define ore-market-id "X1-KS52-61262Z")
   (define queue (make-queue))
-  (define extract-script (build-extract-loop-script ship-id source-id system-id ore-market-id))
+  (define extract-script (build-extract-loop-script ship-id
+                                                    source-id
+                                                    system-id
+                                                    precious-ore-market-id
+                                                    ore-market-id))
   (define scripts (hash 'extract extract-script))
   (define state (hash 'count 0 'max-count 10))
   
@@ -268,8 +287,7 @@
              (printf "selling ~s units of ~s for ~s~n" units symbol price))
            #t]
           [else 
-           (printf "jettisoning ~s units of ~a~n" units symbol)
-           (jettison-cargo ship-symbol symbol units)
+           (printf "ignoring ~s units of ~a~n" units symbol)
            #f]))))
   
   (refuel-ship ship-symbol)
@@ -277,3 +295,13 @@
   
   (current-utc-date))
           
+(define (jettison ship-symbol)
+  (let ([inventory (ship-inventory (data (get-ship ship-symbol)))])
+    (printf "jettisoning inventory: ~s~n" (map symbol inventory))
+    (for ([item (in-list inventory)])
+      (let ([symbol (hash-ref item 'symbol)]
+            [units (hash-ref item 'units)])
+        (printf "jettisoning ~s units of ~a~n" units symbol)
+        (jettison-cargo ship-symbol symbol units))))
+             
+  (current-utc-date))
