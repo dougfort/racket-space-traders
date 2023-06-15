@@ -2,8 +2,11 @@
 
 ;; 
 
+(provide display-waypoint-traits display-all-markets)
+
 (require threading)
 (require "timestamp.rkt")
+(require "distance.rkt")
 (require "api/systems.rkt")
 (require "api/fleet.rkt")
 (require "api/contracts.rkt")
@@ -11,6 +14,7 @@
 (require "api/factions.rkt")
 (require "api/wrappers.rkt")
 (require "lenses/all.rkt")
+(require "lenses/agent.rkt")
 (require "lenses/waypoint.rkt")
 (require "lenses/ship.rkt")
 (require "lenses/shipyard-ship.rkt")
@@ -20,6 +24,18 @@
 
 (define (list-waypoint-symbols system-id)
   (map waypoint-symbol (data (list-waypoints-in-system system-id))))
+
+;; load all the waypoint objects in a system into a hash for future reference
+(define (load-waypoints-in-hash system-id)
+  (for/hash ([waypoint (data (list-waypoints-in-system system-id))])
+    (values (symbol waypoint) waypoint)))
+
+;; return a list of pairs of (waypoint-id . distance) for all waypoints in a system
+;; where distance is the distance from a specified waypoint
+(define (list-waypoint-distances system-id waypoint-id)
+  (let ([obj1 (data (get-waypoint system-id waypoint-id))])
+    (map (λ (obj2) (cons (symbol obj2) (ceiling (distance obj1 obj2))))
+         (data (list-waypoints-in-system system-id)))))
 
 (define (display-waypoint-traits system-id)
   (for ([wp (data (list-waypoints-in-system system-id))])

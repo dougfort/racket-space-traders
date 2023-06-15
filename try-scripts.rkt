@@ -120,6 +120,28 @@
                  (task null sell-cargo-at-market-2)
                  (task null check-count))))
 
+(define (build-local-extract-loop-script ship-id system-id market-id)
+  (define extract-from-current-location
+    (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
+                           (printf "remaining capacity ~s~n" remaining-capacity)
+                           (cond
+                             [(zero? remaining-capacity) (task-result timestamp 'increment state)]
+                             [else (task-result timestamp 'extract state)])))) 
+  
+  (define sell-cargo-at-market
+    (λ (script-id state) (let ([timestamp (sell ship-id system-id market-id)])
+                           (task-result timestamp 'increment state)))) 
+  
+  (define jettison-all-cargo
+    (λ (script-id state) (let ([timestamp (jettison ship-id)])
+                           (task-result timestamp 'increment state)))) 
+  
+  (list->vector (list
+                 (task 'repeat jettison-all-cargo)
+                 (task 'extract extract-from-current-location)
+                 (task null sell-cargo-at-market)
+                 (task null check-count))))
+
 (define (run-navigate-test)
   (define queue (make-queue))
   (define scripts (make-hash))
@@ -173,6 +195,26 @@
   (process-queue scripts queue)
   
   (printf "finish extract loop test: credits ~s~n" (agent-credits (data (get-agent)))))
+
+(define (run-extract-local-loop-test [ship-id "DRFOGOUT-1"])
+  (printf "start extract local loop test: credits ~s~n" (agent-credits (data (get-agent))))
+  
+  (define system-id "X1-GX66")
+  (define waypoint-id "X1-GX66-49714D")
+  (define queue (make-queue))
+  (define extract-script (build-local-extract-loop-script ship-id
+                                                          system-id
+                                                          waypoint-id))
+  (define scripts (hash 'extract extract-script))
+  (define state (hash 'count 0 'max-count 30))
+  
+  (queue-push-by-date! queue
+                       (current-utc-date)
+                       (task-step (script-pos 'extract 0) state))
+
+  (process-queue scripts queue)
+  
+  (printf "finish local extract loop test: credits ~s~n" (agent-credits (data (get-agent)))))
 
 (define (process-queue scripts queue)
   (cond
@@ -243,6 +285,8 @@
 
 ;; extract resources from a suitable location
 (define (extract ship-symbol)
+  (orbit-ship ship-symbol)
+  
   (let* ([ship-details (get-ship ship-symbol)]
          [ship-detail-data (data ship-details)]
          [starting-capacity (ship-cargo-capacity ship-detail-data)]
@@ -266,7 +310,7 @@
       (hash-ref 'transaction)
       (hash-ref 'totalPrice)))
 
-;; sell (or jettison) the ship's cargo
+;; sell the ship's cargo
 (define (sell ship-symbol system-id waypoint-id)
   (dock-ship ship-symbol)
   
@@ -295,6 +339,7 @@
   
   (current-utc-date))
           
+;; jettison the ship's (unsold) cargo
 (define (jettison ship-symbol)
   (let ([inventory (ship-inventory (data (get-ship ship-symbol)))])
     (printf "jettisoning inventory: ~s~n" (map symbol inventory))
@@ -305,3 +350,4 @@
         (jettison-cargo ship-symbol symbol units))))
              
   (current-utc-date))
+
