@@ -126,7 +126,11 @@
                            (printf "remaining capacity ~s~n" remaining-capacity)
                            (cond
                              [(zero? remaining-capacity) (task-result timestamp 'increment state)]
-                             [else (task-result timestamp 'extract state)])))) 
+                             [else (task-result timestamp 'extract state)]))))
+  
+  (define survey-local-waypoint
+    (λ (script-id state) (let-values ([(timestamp next-state) (survey state ship-id)])
+                           (task-result timestamp 'increment next-state))))
   
   (define sell-cargo-at-market
     (λ (script-id state) (let ([timestamp (sell ship-id system-id market-id)])
@@ -138,7 +142,8 @@
   
   (list->vector (list
                  (task 'repeat jettison-all-cargo)
-                 (task 'extract extract-from-current-location)
+                 (task 'extract survey-local-waypoint)
+                 (task null extract-from-current-location)
                  (task null sell-cargo-at-market)
                  (task null check-count))))
 
@@ -206,7 +211,7 @@
                                                           system-id
                                                           waypoint-id))
   (define scripts (hash 'extract extract-script))
-  (define state (hash 'count 0 'max-count 30))
+  (define state (hash 'count 0 'max-count 10))
   
   (queue-push-by-date! queue
                        (current-utc-date)
@@ -351,3 +356,25 @@
              
   (current-utc-date))
 
+(define (survey-expired? survey)
+  (let* ([survey-expiration (hash-ref survey 'expiration)]
+         [survey-expiration-date (parse-timestamp survey-expiration)]
+         [survey-expiration-seconds (date->seconds survey-expiration-date #f)])
+    (< survey-expiration-seconds (current-seconds))))         
+
+;; run a survey if there isn't a current one
+(define (survey state ship-id)
+  ;; TODO: generate a unique key using format and string->symbol
+  (let* ([survey-key 'survey]
+         [survey (hash-ref state survey-key #f)])
+    (cond
+      [(or (not survey) (survey-expired? survey))
+       (let* ([survey-result (create-survey ship-id)]
+              [survey-result-data (data survey-result)]
+              [surveys (hash-ref survey-result-data 'surveys)]
+              [expiration (parse-timestamp (cooldown-expiration survey-result-data))])
+         (printf "survey(s): ~s~n" surveys)
+         (values expiration (hash-set state survey-key (first surveys))))]
+      [else (values (current-utc-date) state)])))
+       
+    
