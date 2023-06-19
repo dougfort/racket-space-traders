@@ -10,9 +10,9 @@
 (require "api/wrappers.rkt")
 (require "lenses/agent.rkt")
 
-(define jump-gate "X1-KS52-51429E")
-(define asteroid-field "X1-GX66-49714D")
-(define possible-market "X1-GX66-49714D")
+(define jump-gate "X1-JY4-53689F")
+(define asteroid-field "X1-GK66-58814Z")
+(define possible-market "X1-GK66-58814Z")
 
 ;; perform a breadth first seatch on a tree of jump gates
 (define (search-jump-gate system-id waypoint-id)
