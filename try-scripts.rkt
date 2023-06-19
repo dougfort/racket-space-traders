@@ -6,6 +6,7 @@
 (require racket/date)
 (require "timestamp.rkt")
 (require "api/agents.rkt")
+(require "api/contracts.rkt")
 (require "api/factions.rkt")
 (require "api/fleet.rkt")
 (require "api/systems.rkt")
@@ -15,6 +16,8 @@
 (require "lenses/ship-nav.rkt")
 (require "lenses/cargo.rkt")
 (require "lenses/cooldown.rkt")
+(require "lenses/contract.rkt")
+(require "lenses/contract-deliver-good.rkt")
 (require "lenses/all.rkt")
 (require "wait-queue.rkt")
 
@@ -120,6 +123,51 @@
                  (task null sell-cargo-at-market-2)
                  (task null check-count))))
 
+(define (build-contract-loop-script contract-id contract-cargo-id ship-id source-id system-id dest-id)
+  (define navigate-to-source
+    (λ (script-id state) (let ([timestamp (navigate ship-id source-id)])
+                           (task-result timestamp 'increment state)))) 
+  (define navigate-to-dest
+    (λ (script-id state) (let ([timestamp (navigate ship-id dest-id)])
+                           (task-result timestamp 'increment state)))) 
+  
+  (define extract-from-current-location
+    (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
+                           (printf "remaining capacity ~s~n" remaining-capacity)
+                           (cond
+                             [(zero? remaining-capacity) (task-result timestamp 'increment state)]
+                             [else (task-result timestamp 'extract state)])))) 
+  
+  (define deliver-contract-cargo-at-dest
+    (λ (script-id state) (let ([timestamp (deliver contract-id ship-id contract-cargo-id)])
+                           (task-result timestamp 'increment state)))) 
+  
+  (define sell-cargo-at-dest
+    (λ (script-id state) (let ([timestamp (sell ship-id system-id dest-id)])
+                           (task-result timestamp 'increment state)))) 
+  
+  (define jettison-all-cargo
+    (λ (script-id state) (let ([timestamp (jettison ship-id)])
+                           (task-result timestamp 'increment state))))
+
+  (define check-contract-status
+    ;; TODO: handle multiple deliverables
+    (λ (script-id state) (let-values ([(timestamp units-needed)
+                                       (compute-units-needed contract-id contract-cargo-id)])
+                           (cond
+                             [(zero? units-needed) (task-result timestamp 'increment state)]
+                             [else (task-result timestamp 'repeat state)]))))
+                                      
+  
+  (list->vector (list
+                 (task 'repeat navigate-to-source)
+                 (task null jettison-all-cargo)
+                 (task 'extract extract-from-current-location)
+                 (task null navigate-to-dest)
+                 (task null deliver-contract-cargo-at-dest)
+                 (task null sell-cargo-at-dest)
+                 (task null check-contract-status))))
+
 (define (build-local-extract-loop-script ship-id system-id market-id)
   (define extract-from-current-location
     (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
@@ -201,6 +249,36 @@
   
   (printf "finish extract loop test: credits ~s~n" (agent-credits (data (get-agent)))))
 
+(define (run-contract-loop-test [ship-id "DRFOGOUT-3"])
+  (printf "start contract loop test~n")
+
+  (define contract-id "clj0aocs800yfs60d2vwqhlir")
+  (define contract-cargo-id "COPPER_ORE")
+
+  (define system-id "X1-JY4")
+  (define source-id "X1-JY4-95125X") ; asteroid field
+  (define contract-dest-id "X1-JY4-71702C")
+  
+  (define queue (make-queue))
+  (define contract-loop-script (build-contract-loop-script contract-id
+                                                           contract-cargo-id
+                                                           ship-id
+                                                           source-id
+                                                           system-id
+                                                           contract-dest-id))
+  
+  (define scripts (hash 'contract-loop contract-loop-script))
+  (define state (hash))
+  
+  (queue-push-by-date! queue
+                       (current-utc-date)
+                       (task-step (script-pos 'contract-loop 0) state))
+
+  (process-queue scripts queue)
+  
+  (printf "finish contract loop test: ~s~n"
+          (contract-deliverables (data (get-contract contract-id)))))
+
 (define (run-extract-local-loop-test [ship-id "DRFOGOUT-1"])
   (printf "start extract local loop test: credits ~s~n" (agent-credits (data (get-agent))))
   
@@ -211,7 +289,7 @@
                                                           system-id
                                                           waypoint-id))
   (define scripts (hash 'extract extract-script))
-  (define state (hash 'count 0 'max-count 10))
+  (define state (hash 'count 0 'max-count 30))
   
   (queue-push-by-date! queue
                        (current-utc-date)
@@ -343,6 +421,47 @@
   (orbit-ship ship-symbol)
   
   (current-utc-date))
+          
+;; deliver the ship's contract cargo
+(define (deliver  contract-id ship-symbol cargo-symbol)
+  (dock-ship ship-symbol)
+  
+  (let ([inventory (ship-inventory (data (get-ship ship-symbol)))])
+    (printf "contract delivery: ~s; inventory ~s~n" contract-id (map symbol inventory))
+    (for ([item (in-list inventory)])
+      (let ([symbol (hash-ref item 'symbol)]
+            [units (hash-ref item 'units)])
+        (cond
+          [(equal? symbol cargo-symbol)
+           (deliver-contract contract-id ship-symbol cargo-symbol units)
+           (printf "contract delivery: ~s; delivering ~s units of ~s~n"
+                   contract-id units symbol)]
+          [else 
+           (printf "contract delivery: ~s; ignoring ~s units of ~a~n" contract-id units symbol)
+           #f]))))
+  
+  
+  (refuel-ship ship-symbol)
+  (orbit-ship ship-symbol)
+  
+  (current-utc-date))
+
+(define (compute-units-needed contract-id trade-good)
+  (let* ([contract (data (get-contract contract-id))]
+         [deliverables (contract-deliverables contract)]
+         [deliverable (findf (λ (elem) (equal? (deliverable-trade-symbol elem) trade-good))
+                             deliverables)]
+         [units-required (deliverable-units-required deliverable)]
+         [units-fulfilled (deliverable-units-fulfilled deliverable)])
+    (printf "contract strtus: ~s ~s required: ~s; fulfilled ~s~n"
+            contract-id trade-good units-required units-fulfilled)
+    (let ([units-needed
+           (cond
+             [(>= units-fulfilled units-required) 0]
+             [else (- units-required units-fulfilled)])])
+      (values (current-utc-date) units-needed))))
+    
+         
           
 ;; jettison the ship's (unsold) cargo
 (define (jettison ship-symbol)

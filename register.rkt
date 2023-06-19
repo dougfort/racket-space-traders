@@ -6,7 +6,8 @@
 (require json)
 
 (define callsign "DRFOGOUT")
-(define faction "COSMIC")
+;(define faction "COSMIC")
+(define faction "QUANTUM")
 (define available-factions '("COSMIC"
                              "VOID"
                              "GALACTIC"

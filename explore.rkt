@@ -7,6 +7,7 @@
 (require threading)
 (require "timestamp.rkt")
 (require "distance.rkt")
+(require "paged-reader.rkt")
 (require "api/systems.rkt")
 (require "api/fleet.rkt")
 (require "api/contracts.rkt")
@@ -63,8 +64,8 @@
        (filter (λ (wp) (waypoint-has-trait? wp "MARKETPLACE"))
                (data (list-waypoints-in-system system-id)))))
 
-(define (list-waypoint-market-trade-goods waypoint-id)
-  (hash-ref (get-market waypoint-id) 'tradeGoods))
+(define (list-waypoint-market-trade-goods system-id waypoint-id)
+  (hash-ref (data (get-market system-id waypoint-id)) 'tradeGoods))
     
 (define (list-waypoint-market-exports system-id waypoint-id)
   (hash-ref (get-market system-id waypoint-id) 'exports))
