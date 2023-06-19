@@ -123,12 +123,22 @@
                  (task null sell-cargo-at-market-2)
                  (task null check-count))))
 
-(define (build-contract-loop-script contract-id contract-cargo-id ship-id source-id system-id dest-id)
+(define (build-contract-loop-script contract-id
+                                    contract-cargo-id
+                                    ship-id source-id
+                                    system-id
+                                    contract-dest-id
+                                    market-dest-id)
   (define navigate-to-source
     (λ (script-id state) (let ([timestamp (navigate ship-id source-id)])
+                           (task-result timestamp 'increment state))))
+  
+  (define navigate-to-contract-dest
+    (λ (script-id state) (let ([timestamp (navigate ship-id contract-dest-id)])
                            (task-result timestamp 'increment state)))) 
-  (define navigate-to-dest
-    (λ (script-id state) (let ([timestamp (navigate ship-id dest-id)])
+  
+  (define navigate-to-market-dest
+    (λ (script-id state) (let ([timestamp (navigate ship-id market-dest-id)])
                            (task-result timestamp 'increment state)))) 
   
   (define extract-from-current-location
@@ -142,8 +152,12 @@
     (λ (script-id state) (let ([timestamp (deliver contract-id ship-id contract-cargo-id)])
                            (task-result timestamp 'increment state)))) 
   
-  (define sell-cargo-at-dest
-    (λ (script-id state) (let ([timestamp (sell ship-id system-id dest-id)])
+  (define sell-cargo-at-contract-dest
+    (λ (script-id state) (let ([timestamp (sell ship-id system-id contract-dest-id)])
+                           (task-result timestamp 'increment state)))) 
+  
+  (define sell-cargo-at-market-dest
+    (λ (script-id state) (let ([timestamp (sell ship-id system-id market-dest-id)])
                            (task-result timestamp 'increment state)))) 
   
   (define jettison-all-cargo
@@ -163,9 +177,11 @@
                  (task 'repeat navigate-to-source)
                  (task null jettison-all-cargo)
                  (task 'extract extract-from-current-location)
-                 (task null navigate-to-dest)
+                 (task null navigate-to-contract-dest)
                  (task null deliver-contract-cargo-at-dest)
-                 (task null sell-cargo-at-dest)
+                 (task null sell-cargo-at-contract-dest)
+                 (task null navigate-to-market-dest)
+                 (task null sell-cargo-at-market-dest)
                  (task null check-contract-status))))
 
 (define (build-local-extract-loop-script ship-id system-id market-id)
@@ -258,6 +274,7 @@
   (define system-id "X1-JY4")
   (define source-id "X1-JY4-95125X") ; asteroid field
   (define contract-dest-id "X1-JY4-71702C")
+  (define market-dest-id "X1-JY4-95125X")
   
   (define queue (make-queue))
   (define contract-loop-script (build-contract-loop-script contract-id
@@ -265,7 +282,8 @@
                                                            ship-id
                                                            source-id
                                                            system-id
-                                                           contract-dest-id))
+                                                           contract-dest-id
+                                                           market-dest-id))
   
   (define scripts (hash 'contract-loop contract-loop-script))
   (define state (hash))
