@@ -300,8 +300,8 @@
 (define (run-extract-local-loop-test [ship-id "DRFOGOUT-1"])
   (printf "start extract local loop test: credits ~s~n" (agent-credits (data (get-agent))))
   
-  (define system-id "X1-GX66")
-  (define waypoint-id "X1-GX66-49714D")
+  (define system-id "X1-GK66")
+  (define waypoint-id "X1-GK66-58814Z")
   (define queue (make-queue))
   (define extract-script (build-local-extract-loop-script ship-id
                                                           system-id

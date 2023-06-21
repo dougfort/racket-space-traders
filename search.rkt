@@ -11,6 +11,7 @@
 (require "lenses/agent.rkt")
 
 (define jump-gate "X1-JY4-53689F")
+(define return-jump-gate "X1-GK66-41215C")
 (define asteroid-field "X1-GK66-58814Z")
 (define possible-market "X1-GK66-58814Z")
 
