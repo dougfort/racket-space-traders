@@ -47,11 +47,6 @@
                            [else
                             (task-result timestamp 'repeat (hash-set state 'count next-count))]))))
 
-(struct task (label fn))
-(struct script-pos (id index))
-(struct task-step (pos state)) 
-(struct task-result (timestamp op state))
-
 ;; navigate to agent headquarters
 ;; then navigate to the asteroid field and back
 (define (build-navigate-script ship-id asteroid-field)
@@ -317,46 +312,6 @@
   
   (printf "finish local extract loop test: credits ~s~n" (agent-credits (data (get-agent)))))
 
-(define (process-queue scripts queue)
-  (cond
-    [(queue-empty? queue) (println "queue is empty")]
-    [else
-     (queue-wait queue)
-     (let* ([step (queue-pop queue)]
-            [pos (task-step-pos step)]
-            [state (task-step-state step)]
-            [script-id (script-pos-id pos)]
-            [script-index (script-pos-index pos)]
-            [script (hash-ref scripts script-id)])
-       (printf "script-id ~s; script-index ~s~n" script-id script-index )
-       (cond
-         [(>= script-index (vector-length script))
-          (printf "end of script ~s~n" script-id)]
-         [else
-          (let* ([task-item (vector-ref script script-index)]
-                 [fn (task-fn task-item)]
-                 [result (fn script-id state)]
-                 [timestamp (task-result-timestamp result)]
-                 [op (task-result-op result)]
-                 [state (task-result-state result)]
-                 [index (cond
-                          [(equal? op 'increment) (add1 script-index)]
-                          [else (find-label-index script op)])])
-                                                
-            (queue-push-by-date! queue
-                                 timestamp
-                                 (task-step (script-pos script-id index) state)))])
-       (process-queue scripts queue))]))
-
-;; search a script vector
-;; returning the index of a matching label
-(define (find-label-index script label)
-  (for/or ([i (in-naturals)])
-    (let ([task-item (vector-ref script i)])
-      (if (equal? (task-label task-item) label)
-          i
-          #f))))
-            
 ;; navigate the ship to the specified location
 ;; do nothing if the ship is already there
 (define (navigate ship-symbol destination-symbol)
