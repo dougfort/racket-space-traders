@@ -221,7 +221,7 @@
 (define (negotiate-contract ship-symbol)
   (let ([uri (string-join (list "/v2/my/ships/" ship-symbol "/negotiate/contract") "")])
     ;; 2023-06-04 dougfort -- the docs say 201, I get 200
-    (hash-ref (api-post uri #f '(200 201)))))
+    (api-post uri #f '(200 201))))
 
 ;; Get the mounts on a ship.
 (define (get-mounts ship-symbol)
