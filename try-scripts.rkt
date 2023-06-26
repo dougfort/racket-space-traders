@@ -12,14 +12,16 @@
 (require "api/systems.rkt")
 (require "api/wrappers.rkt")
 (require "lenses/agent.rkt")
+(require "lenses/contract.rkt")
 (require "lenses/ship.rkt")
 (require "lenses/ship-nav.rkt")
 (require "lenses/cargo.rkt")
 (require "lenses/cooldown.rkt")
-(require "lenses/contract.rkt")
 (require "lenses/contract-deliver-good.rkt")
 (require "lenses/all.rkt")
 (require "wait-queue.rkt")
+(require "distance.rkt")
+(require "directory.rkt")
 
 ;; return a hash of (symbol . #t) containing all trade goods at the local market
 (define (get-market-trade-goods system-id waypoint-id)    
@@ -136,6 +138,10 @@
     (λ (script-id state) (let ([timestamp (navigate ship-id market-dest-id)])
                            (task-result timestamp 'increment state)))) 
   
+  (define survey-local-waypoint
+    (λ (script-id state) (let-values ([(timestamp next-state) (survey state ship-id)])
+                           (task-result timestamp 'increment next-state))))
+  
   (define extract-from-current-location
     (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
                            (printf "remaining capacity ~s~n" remaining-capacity)
@@ -167,17 +173,22 @@
                              [(zero? units-needed) (task-result timestamp 'increment state)]
                              [else (task-result timestamp 'repeat state)]))))
                                       
-  
+  (define mark-contract-fulfilled
+    (λ (script-id state) (let ([timestamp (fulfill contract-id)])
+                           (task-result timestamp 'increment state))))
+
   (list->vector (list
                  (task 'repeat navigate-to-source)
                  (task null jettison-all-cargo)
-                 (task 'extract extract-from-current-location)
+                 (task 'extract survey-local-waypoint)
+                 (task null extract-from-current-location)
                  (task null navigate-to-contract-dest)
                  (task null deliver-contract-cargo-at-dest)
                  (task null sell-cargo-at-contract-dest)
                  (task null navigate-to-market-dest)
                  (task null sell-cargo-at-market-dest)
-                 (task null check-contract-status))))
+                 (task null check-contract-status)
+                 (task null mark-contract-fulfilled))))
 
 (define (build-local-extract-loop-script ship-id system-id market-id)
   (define extract-from-current-location
@@ -236,7 +247,7 @@
 
   (process-queue scripts queue))
 
-(define (run-extract-loop-test [ship-id "DRFOGOUT-3"])
+(define (run-extract-loop [ship-id "DRFOGOUT-3"])
   (printf "start extract loop test: credits ~s~n" (agent-credits (data (get-agent))))
   
   (define system-id "X1-KS52")
@@ -260,22 +271,14 @@
   
   (printf "finish extract loop test: credits ~s~n" (agent-credits (data (get-agent)))))
 
-(define (run-contract-loop-test [ship-id "DRFOGOUT-3"])
+(define (run-contract-loop [ship-id "DRFOGOUT-1"])
   (printf "start contract loop test~n")
-
-  (define contract-id "clj0aocs800yfs60d2vwqhlir")
-  (define contract-cargo-id "COPPER_ORE")
-
-  (define system-id "X1-JY4")
-  (define source-id "X1-JY4-95125X") ; asteroid field
-  (define contract-dest-id "X1-JY4-71702C")
-  (define market-dest-id "X1-JY4-95125X")
   
   (define queue (make-queue))
   (define contract-loop-script (build-contract-loop-script contract-id
                                                            contract-cargo-id
                                                            ship-id
-                                                           source-id
+                                                           asteroid-field-id
                                                            system-id
                                                            contract-dest-id
                                                            market-dest-id))
@@ -337,6 +340,11 @@
   
   (printf "negotiate contract ~s~n" ship-symbol)
   (let ([result (negotiate-contract ship-symbol)])
+    (printf "contract result: ~n~s~n" result)))
+
+(define (fulfill contract-id)
+  (printf "fullfill contract ~s~n" contract-id)
+  (let ([result (fulfill-contract contract-id)])
     (printf "contract result: ~n~s~n" result)))
 
 ;; extract resources from a suitable location

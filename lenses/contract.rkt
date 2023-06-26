@@ -2,7 +2,7 @@
 
 ;; 
 
-(provide contract-id contract-deliverables)
+(provide contract-deliverables)
 
 (require threading)
 

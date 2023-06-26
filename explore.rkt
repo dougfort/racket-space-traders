@@ -1,10 +1,15 @@
+
 #lang racket
 
 ;; 
 
-(provide display-waypoint-traits display-all-markets)
+(provide list-all-waypoints
+         waypoint-has-trait?
+         display-waypoint-traits
+         display-all-markets)
 
 (require threading)
+(require "directory.rkt")
 (require "timestamp.rkt")
 (require "distance.rkt")
 (require "paged-reader.rkt")
@@ -23,12 +28,15 @@
 (define (list-system-by-key key)
   (map (λ (s) (hash-ref s key)) (list-systems)))
 
+(define (list-all-waypoints system-id)
+  (flatten-pages (λ (limit page) (list-waypoints-in-system system-id limit page))))
+
 (define (list-waypoint-symbols system-id)
-  (map waypoint-symbol (data (list-waypoints-in-system system-id))))
+  (map waypoint-symbol (list-all-waypoints system-id)))
 
 ;; load all the waypoint objects in a system into a hash for future reference
 (define (load-waypoints-in-hash system-id)
-  (for/hash ([waypoint (data (list-waypoints-in-system system-id))])
+  (for/hash ([waypoint (list-all-waypoints system-id)])
     (values (symbol waypoint) waypoint)))
 
 ;; return a list of pairs of (waypoint-id . distance) for all waypoints in a system
