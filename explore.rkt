@@ -48,7 +48,7 @@
 
 (define (display-waypoint-traits system-id)
   (for ([wp (data (list-waypoints-in-system system-id))])
-    (printf "symbol: ~a; type: ~a~n" (waypoint-symbol wp) (waypoint-type wp))
+    (printf "waypoint symbol: ~a; type: ~a~n" (waypoint-symbol wp) (waypoint-type wp))
     (for ([t (waypoint-traits wp)])
       (printf "    ~a~n" (hash-ref t 'symbol)))))
 

@@ -93,7 +93,7 @@
   
   (define extract-from-current-location
     (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
-                           (printf "remaining capacity ~s~n" remaining-capacity)
+                           (printf "extract-from-current-location: remaining capacity ~s~n" remaining-capacity)
                            (cond
                              [(zero? remaining-capacity) (task-result timestamp 'increment state)]
                              [else (task-result timestamp 'extract state)])))) 
@@ -144,7 +144,7 @@
   
   (define extract-from-current-location
     (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
-                           (printf "remaining capacity ~s~n" remaining-capacity)
+                           (printf "extract-from-current-location: remaining capacity ~s~n" remaining-capacity)
                            (cond
                              [(zero? remaining-capacity) (task-result timestamp 'increment state)]
                              [else (task-result timestamp 'extract state)])))) 
@@ -193,7 +193,7 @@
 (define (build-local-extract-loop-script ship-id system-id market-id)
   (define extract-from-current-location
     (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
-                           (printf "remaining capacity ~s~n" remaining-capacity)
+                           (printf "extract-from-current-location:  remaining capacity ~s~n" remaining-capacity)
                            (cond
                              [(zero? remaining-capacity) (task-result timestamp 'increment state)]
                              [else (task-result timestamp 'extract state)]))))
@@ -248,18 +248,15 @@
   (process-queue scripts queue))
 
 (define (run-extract-loop [ship-id "DRFOGOUT-3"])
-  (printf "start extract loop test: credits ~s~n" (agent-credits (data (get-agent))))
-  
-  (define system-id "X1-KS52")
-  (define source-id "X1-KS52-51225B") ; asteroid field
-  (define precious-ore-market-id "X1-KS52-25044Z")
-  (define ore-market-id "X1-KS52-61262Z")
   (define queue (make-queue))
+  
+  (printf "start extract loop: ship: ~s credits ~s~n" ship-id (agent-credits (data (get-agent))))
+  
   (define extract-script (build-extract-loop-script ship-id
-                                                    source-id
+                                                    asteroid-field-id
                                                     system-id
-                                                    precious-ore-market-id
-                                                    ore-market-id))
+                                                    market-dest-id
+                                                    asteroid-field-id))
   (define scripts (hash 'extract extract-script))
   (define state (hash 'count 0 'max-count 10))
   
@@ -269,10 +266,10 @@
 
   (process-queue scripts queue)
   
-  (printf "finish extract loop test: credits ~s~n" (agent-credits (data (get-agent)))))
+  (printf "finish extract loop: ship: ~s credits ~s~n" ship-id (agent-credits (data (get-agent)))))
 
-(define (run-contract-loop [ship-id "DRFOGOUT-1"])
-  (printf "start contract loop test~n")
+(define (run-contract-loop contract-id [ship-id "DRFOGOUT-1"])
+  (printf "start contract loop: ~s; ~s~n" contract-id ship-id)
   
   (define queue (make-queue))
   (define contract-loop-script (build-contract-loop-script contract-id
@@ -292,18 +289,15 @@
 
   (process-queue scripts queue)
   
-  (printf "finish contract loop test: ~s~n"
-          (contract-deliverables (data (get-contract contract-id)))))
-
-(define (run-extract-local-loop-test [ship-id "DRFOGOUT-1"])
-  (printf "start extract local loop test: credits ~s~n" (agent-credits (data (get-agent))))
+  (printf "finish contract loop: ~s; ~s~n" contract-id ship-id))
   
-  (define system-id "X1-GK66")
-  (define waypoint-id "X1-GK66-58814Z")
+(define (run-extract-local-loop [ship-id "DRFOGOUT-1"])
+  (printf "start extract local loop: ship: ~s credits ~s~n" ship-id (agent-credits (data (get-agent))))
+  
   (define queue (make-queue))
   (define extract-script (build-local-extract-loop-script ship-id
                                                           system-id
-                                                          waypoint-id))
+                                                          asteroid-field-id))
   (define scripts (hash 'extract extract-script))
   (define state (hash 'count 0 'max-count 30))
   
@@ -313,33 +307,33 @@
 
   (process-queue scripts queue)
   
-  (printf "finish local extract loop test: credits ~s~n" (agent-credits (data (get-agent)))))
+  (printf "finish local extract loop: ship: credits ~s~n" ship-id (agent-credits (data (get-agent)))))
 
 ;; navigate the ship to the specified location
 ;; do nothing if the ship is already there
-(define (navigate ship-symbol destination-symbol)
-  (dock-ship ship-symbol)
-  (refuel-ship ship-symbol)  
-  (orbit-ship ship-symbol)
+(define (navigate ship-id destination-id)
+  (dock-ship ship-id)
+  (refuel-ship ship-id)  
+  (orbit-ship ship-id)
   
-  (printf "navigate ~s ~s~n" ship-symbol destination-symbol)
-  (let ([current-location (ship-location (data (get-ship ship-symbol)))])
+  (let ([current-location (ship-location (data (get-ship ship-id)))])
+    (printf "navigate ~s from ~s to ~s~n" ship-id current-location destination-id)
     (cond
-      [(equal? current-location destination-symbol)
+      [(equal? current-location destination-id)
        (current-utc-date)]
       [else
-       (let ([nav-result (navigate-ship ship-symbol destination-symbol)])
+       (let ([nav-result (navigate-ship ship-id destination-id)])
          (parse-timestamp (nav-arrival (data nav-result))))])))
       
 ;; assume ship is at headquarters
 ;; dock
 ;; negotiate-contract
-(define (negotiate ship-symbol)
-  (dock-ship ship-symbol)
-  (refuel-ship ship-symbol)  
+(define (negotiate ship-id)
+  (dock-ship ship-id)
+  (refuel-ship ship-id)  
   
-  (printf "negotiate contract ~s~n" ship-symbol)
-  (let ([result (negotiate-contract ship-symbol)])
+  (printf "negotiate contract ~s~n" ship-id)
+  (let ([result (negotiate-contract ship-id)])
     (printf "contract result: ~n~s~n" result)))
 
 (define (fulfill contract-id)
@@ -348,10 +342,10 @@
     (printf "contract result: ~n~s~n" result)))
 
 ;; extract resources from a suitable location
-(define (extract ship-symbol)
-  (orbit-ship ship-symbol)
+(define (extract ship-id)
+  (orbit-ship ship-id)
   
-  (let* ([ship-details (get-ship ship-symbol)]
+  (let* ([ship-details (get-ship ship-id)]
          [ship-detail-data (data ship-details)]
          [starting-capacity (ship-cargo-capacity ship-detail-data)]
          [starting-units (ship-cargo-units ship-detail-data)])
@@ -359,8 +353,8 @@
       [(>= starting-units starting-capacity)
        (values (current-utc-date) 0)]
       [else
-       (printf "extract resources ~s~n" ship-symbol)
-       (let* ([extract-result (extract-resources ship-symbol)]
+       (printf "extract: ~s~n" ship-id)
+       (let* ([extract-result (extract-resources ship-id)]
               [extract-result-data (data extract-result)]
               [expiration (parse-timestamp (cooldown-expiration extract-result-data))]
               [capacity (cargo-capacity extract-result-data)]
@@ -375,55 +369,55 @@
       (hash-ref 'totalPrice)))
 
 ;; sell the ship's cargo
-(define (sell ship-symbol system-id waypoint-id)
-  (dock-ship ship-symbol)
+(define (sell ship-id system-id waypoint-id)
+  (dock-ship ship-id)
   
   (let ([market-trade-goods (get-market-trade-goods system-id waypoint-id)]
-        [inventory (ship-inventory (data (get-ship ship-symbol)))])
-    (printf "trade goods at ~s ~s: ~s\n"
+        [inventory (ship-inventory (data (get-ship ship-id)))])
+    (printf "sell: trade goods at market: ~s ~s: ~s\n"
             system-id
             waypoint-id
             (hash-keys market-trade-goods))
-    (printf "inventory: ~s~n" (map symbol inventory))
+    (printf "sell: ship inventory: ~s: ~s~n" ship-id (map symbol inventory))
     (for ([item (in-list inventory)])
       (let ([symbol (hash-ref item 'symbol)]
             [units (hash-ref item 'units)])
         (cond
           [(hash-has-key? market-trade-goods symbol)
-           (let* ([sell-result (sell-cargo ship-symbol symbol units)]
+           (let* ([sell-result (sell-cargo ship-id symbol units)]
                   [price (extract-total-price sell-result)])
-             (printf "selling ~s units of ~s for ~s~n" units symbol price))
+             (printf "sell: selling ~s units of ~s for ~s~n" units symbol price))
            #t]
           [else 
-           (printf "ignoring ~s units of ~a~n" units symbol)
+           (printf "sell: ignoring ~s units of ~s~n" units symbol)
            #f]))))
   
-  (refuel-ship ship-symbol)
-  (orbit-ship ship-symbol)
+  (refuel-ship ship-id)
+  (orbit-ship ship-id)
   
   (current-utc-date))
           
 ;; deliver the ship's contract cargo
-(define (deliver  contract-id ship-symbol cargo-symbol)
-  (dock-ship ship-symbol)
+(define (deliver  contract-id ship-id cargo-symbol)
+  (dock-ship ship-id)
   
-  (let ([inventory (ship-inventory (data (get-ship ship-symbol)))])
-    (printf "contract delivery: ~s; inventory ~s~n" contract-id (map symbol inventory))
+  (let ([inventory (ship-inventory (data (get-ship ship-id)))])
+    (printf "deliver: contract: ~s; inventory: ~s~n" contract-id (map symbol inventory))
     (for ([item (in-list inventory)])
       (let ([symbol (hash-ref item 'symbol)]
             [units (hash-ref item 'units)])
         (cond
           [(equal? symbol cargo-symbol)
-           (deliver-contract contract-id ship-symbol cargo-symbol units)
-           (printf "contract delivery: ~s; delivering ~s units of ~s~n"
+           (deliver-contract contract-id ship-id cargo-symbol units)
+           (printf "deliver: contract: ~s; delivering ~s units of ~s~n"
                    contract-id units symbol)]
           [else 
-           (printf "contract delivery: ~s; ignoring ~s units of ~a~n" contract-id units symbol)
+           (printf "deliver: contract: ~s; ignoring ~s units of ~s~n" contract-id units symbol)
            #f]))))
   
   
-  (refuel-ship ship-symbol)
-  (orbit-ship ship-symbol)
+  (refuel-ship ship-id)
+  (orbit-ship ship-id)
   
   (current-utc-date))
 
@@ -434,7 +428,7 @@
                              deliverables)]
          [units-required (deliverable-units-required deliverable)]
          [units-fulfilled (deliverable-units-fulfilled deliverable)])
-    (printf "contract strtus: ~s ~s required: ~s; fulfilled ~s~n"
+    (printf "compute-units-needed: ~s ~s required: ~s; fulfilled ~s~n"
             contract-id trade-good units-required units-fulfilled)
     (let ([units-needed
            (cond
@@ -445,14 +439,13 @@
          
           
 ;; jettison the ship's (unsold) cargo
-(define (jettison ship-symbol)
-  (let ([inventory (ship-inventory (data (get-ship ship-symbol)))])
-    (printf "jettisoning inventory: ~s~n" (map symbol inventory))
+(define (jettison ship-id)
+  (let ([inventory (ship-inventory (data (get-ship ship-id)))])
     (for ([item (in-list inventory)])
       (let ([symbol (hash-ref item 'symbol)]
             [units (hash-ref item 'units)])
-        (printf "jettisoning ~s units of ~a~n" units symbol)
-        (jettison-cargo ship-symbol symbol units))))
+        (printf "jettison: ship: ~s; ~s units of ~s~n" ship-id units symbol)
+        (jettison-cargo ship-id symbol units))))
              
   (current-utc-date))
 
@@ -473,7 +466,7 @@
               [survey-result-data (data survey-result)]
               [surveys (hash-ref survey-result-data 'surveys)]
               [expiration (parse-timestamp (cooldown-expiration survey-result-data))])
-         (printf "survey(s): ~s~n" surveys)
+         (printf "survey: ship: ~s: ~s~n" ship-id surveys)
          (values expiration (hash-set state survey-key (first surveys))))]
       [else (values (current-utc-date) state)])))
        

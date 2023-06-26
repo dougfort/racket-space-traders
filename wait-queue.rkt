@@ -68,7 +68,6 @@
             [script-id (script-pos-id pos)]
             [script-index (script-pos-index pos)]
             [script (hash-ref scripts script-id)])
-       (printf "script-id ~s; script-index ~s~n" script-id script-index )
        (cond
          [(>= script-index (vector-length script))
           (printf "end of script ~s~n" script-id)]
