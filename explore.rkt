@@ -67,6 +67,11 @@
        (filter (λ (wp) (equal? (waypoint-type wp) "ASTEROID_FIELD"))
                (data (list-waypoints-in-system system-id)))))
 
+(define (list-jump-gate-waypoints system-id)
+  (map waypoint-symbol
+       (filter (λ (wp) (equal? (waypoint-type wp) "JUMP_GATE"))
+               (data (list-waypoints-in-system system-id)))))
+
 (define (list-marketplace-waypoint-symbols system-id)
   (map waypoint-symbol
        (filter (λ (wp) (waypoint-has-trait? wp "MARKETPLACE"))
