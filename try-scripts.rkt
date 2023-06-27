@@ -334,12 +334,14 @@
   
   (printf "negotiate contract ~s~n" ship-id)
   (let ([result (negotiate-contract ship-id)])
-    (printf "contract result: ~n~s~n" result)))
+    (printf "contract result: ~n~s~n" result))
+  (current-utc-date))
 
 (define (fulfill contract-id)
   (printf "fullfill contract ~s~n" contract-id)
   (let ([result (fulfill-contract contract-id)])
-    (printf "contract result: ~n~s~n" result)))
+    (printf "contract result: ~n~s~n" result))
+  (current-utc-date))
 
 ;; extract resources from a suitable location
 (define (extract ship-id)
