@@ -27,7 +27,8 @@
 (define market-dest-id "X1-ZS57-79475E")
 (define shipyard-id "X1-ZS57-93927A")
 (define jump-gate-id "X1-ZS57-82619X")
+(define nearest-to-jump-date-id "X1-ZS57-74998F")
 (define remote-system-id "X1-YC94")
 (define remote-jump-gate-id "X1-YC94-92915D")
 (define remote-asteroid-field "X1-YC94-87814Z")
-
+(define microprocessors-market "X1-ZS57-74998F")

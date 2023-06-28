@@ -191,17 +191,17 @@
                  (task null mark-contract-fulfilled))))
 
 (define (build-local-extract-loop-script ship-id system-id market-id)
+
+  ;; 2023-06-27 djf - I removed the survey step, assuming we use a mining drone
+  ;; fur this, which does not have a survey mount
+  
   (define extract-from-current-location
     (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
                            (printf "extract-from-current-location:  remaining capacity ~s~n" remaining-capacity)
                            (cond
                              [(zero? remaining-capacity) (task-result timestamp 'increment state)]
                              [else (task-result timestamp 'extract state)]))))
-  
-  (define survey-local-waypoint
-    (λ (script-id state) (let-values ([(timestamp next-state) (survey state ship-id)])
-                           (task-result timestamp 'increment next-state))))
-  
+    
   (define sell-cargo-at-market
     (λ (script-id state) (let ([timestamp (sell ship-id system-id market-id)])
                            (task-result timestamp 'increment state)))) 
@@ -212,8 +212,7 @@
   
   (list->vector (list
                  (task 'repeat jettison-all-cargo)
-                 (task 'extract survey-local-waypoint)
-                 (task null extract-from-current-location)
+                 (task 'extract extract-from-current-location)
                  (task null sell-cargo-at-market)
                  (task null check-count))))
 
@@ -291,7 +290,7 @@
   
   (printf "finish contract loop: ~s; ~s~n" contract-id ship-id))
   
-(define (run-extract-local-loop [ship-id "DRFOGOUT-1"])
+(define (run-extract-local-loop [ship-id "DRFOGOUT-1"] [max-count 30])
   (printf "start extract local loop: ship: ~s credits ~s~n" ship-id (agent-credits (data (get-agent))))
   
   (define queue (make-queue))
@@ -299,7 +298,7 @@
                                                           system-id
                                                           asteroid-field-id))
   (define scripts (hash 'extract extract-script))
-  (define state (hash 'count 0 'max-count 30))
+  (define state (hash 'count 0 'max-count max-count))
   
   (queue-push-by-date! queue
                        (current-utc-date)
@@ -307,7 +306,7 @@
 
   (process-queue scripts queue)
   
-  (printf "finish local extract loop: ship: credits ~s~n" ship-id (agent-credits (data (get-agent)))))
+  (printf "finish local extract loop: ship: ~s; credits ~s~n" ship-id (agent-credits (data (get-agent)))))
 
 ;; navigate the ship to the specified location
 ;; do nothing if the ship is already there

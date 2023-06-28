@@ -39,6 +39,11 @@
   (for/hash ([waypoint (list-all-waypoints system-id)])
     (values (symbol waypoint) waypoint)))
 
+(define (id-distance system-id waypoint-id1 waypoint-id2)
+  (let ([obj1 (data (get-waypoint system-id waypoint-id1))]
+        [obj2 (data (get-waypoint system-id waypoint-id2))])
+    (distance obj1 obj2)))
+
 ;; return a list of pairs of (waypoint-id . distance) for all waypoints in a system
 ;; where distance is the distance from a specified waypoint
 (define (list-waypoint-distances system-id waypoint-id)

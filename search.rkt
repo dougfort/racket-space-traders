@@ -18,13 +18,21 @@
     (for ([system (in-list (hash-ref jump-gate-data 'connectedSystems))])
       (let* ([system-id (hash-ref system 'symbol)]
              [waypoints (list-all-waypoints system-id)])
-        (printf "    ~s ~s ~s ~s ~s; ~s waypoints~n"
+        (printf "    ~s ~s (~s, ~s) ~s ~s; ~s waypoints~n"
                 system-id
-                (hash-ref system 'sectorSymbol)
                 (hash-ref system 'type)
+                (hash-ref system 'x)
+                (hash-ref system 'y)
                 (hash-ref system 'factionSymbol)
                 (hash-ref system 'distance)
-                (length waypoints))))))
+                (length waypoints))
+        (for ([waypoint (in-list waypoints)])
+          (printf "        ~s ~s (~s, ~s); ~s~n"
+                  (hash-ref waypoint 'symbol)
+                  (hash-ref waypoint 'type)
+                  (hash-ref waypoint 'x)
+                  (hash-ref waypoint 'y)
+                  (map (λ (t) (hash-ref t 'symbol)) (hash-ref waypoint 'traits))))))))
 
 (define (filter-jump-gate-waypoints system-id waypoint-id pred?)
   (let* ([jump-gate-data (data (get-jump-gate system-id waypoint-id))]
@@ -38,23 +46,13 @@
              #:when (pred? waypoint))
     waypoint))
     
-
-(define (market-has-equipment? waypoint)
-  (cond
-    [(waypoint-has-trait? waypoint "MARKETPLACE")
-     (let* ([system-id (hash-ref waypoint 'systemSymbol)]
-            [waypoint-id (hash-ref waypoint 'symbol)]
-            [market (get-market system-id waypoint-id)]
-            [exchange (hash-ref (data market) 'exchange)])
-       (findf (λ (item) (equal? (hash-ref item 'symbol) "EQUIPMENT")) exchange))]   
-    [else #f]))
-
-(define (market-has-fuel? waypoint)
-  (cond
-    [(waypoint-has-trait? waypoint "MARKETPLACE")
-     (let* ([system-id (hash-ref waypoint 'systemSymbol)]
-            [waypoint-id (hash-ref waypoint 'symbol)]
-            [market (get-market system-id waypoint-id)]
-            [exchange (hash-ref (data market) 'exchange)])
-       (findf (λ (item) (equal? (hash-ref item 'symbol) "FUEL")) exchange))]   
-    [else #f]))
+(define (market-has? trade-good)
+  (λ (waypoint) 
+    (cond
+      [(waypoint-has-trait? waypoint "MARKETPLACE")
+       (let* ([system-id (hash-ref waypoint 'systemSymbol)]
+              [waypoint-id (hash-ref waypoint 'symbol)]
+              [market (get-market system-id waypoint-id)]
+              [exchange (hash-ref (data market) 'exchange)])
+         (findf (λ (item) (equal? (hash-ref item 'symbol) trade-good)) exchange))]   
+      [else #f])))
