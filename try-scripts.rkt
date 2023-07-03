@@ -2,6 +2,8 @@
 
 ;; 
 
+(provide build-extract-loop-script current-utc-date)
+
 (require threading)
 (require racket/date)
 (require space-traders-v2/agents)
