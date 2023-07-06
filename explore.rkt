@@ -9,16 +9,20 @@
          display-all-markets)
 
 (require threading)
+
+(require space-traders-v2/systems)
+(require space-traders-v2/fleet)
+(require space-traders-v2/contracts)
+(require space-traders-v2/agents)
+(require space-traders-v2/factions)
+(require space-traders-v2/wrappers)
+
 (require "directory.rkt")
 (require "timestamp.rkt")
 (require "distance.rkt")
 (require "paged-reader.rkt")
-(require "api/systems.rkt")
-(require "api/fleet.rkt")
-(require "api/contracts.rkt")
-(require "api/agents.rkt")
-(require "api/factions.rkt")
-(require "api/wrappers.rkt")
+(require "runner.rkt")
+
 (require "lenses/all.rkt")
 (require "lenses/agent.rkt")
 (require "lenses/waypoint.rkt")
@@ -62,24 +66,9 @@
 (define (waypoint-has-trait? waypoint-details trait-symbol)
   (findf (λ (t) (equal? (waypoint-symbol t) trait-symbol)) (waypoint-traits waypoint-details)))
 
-(define (list-waypoints-with-shipyard system-id)
+(define (list-waypoints-with-trait system-id trait)
   (map waypoint-symbol
-       (filter (λ (wp) (waypoint-has-trait? wp "SHIPYARD"))
-               (data (list-waypoints-in-system system-id)))))
-
-(define (list-asteroid-field-waypoints system-id)
-  (map waypoint-symbol
-       (filter (λ (wp) (equal? (waypoint-type wp) "ASTEROID_FIELD"))
-               (data (list-waypoints-in-system system-id)))))
-
-(define (list-jump-gate-waypoints system-id)
-  (map waypoint-symbol
-       (filter (λ (wp) (equal? (waypoint-type wp) "JUMP_GATE"))
-               (data (list-waypoints-in-system system-id)))))
-
-(define (list-marketplace-waypoint-symbols system-id)
-  (map waypoint-symbol
-       (filter (λ (wp) (waypoint-has-trait? wp "MARKETPLACE"))
+       (filter (λ (wp) (waypoint-has-trait? wp trait))
                (data (list-waypoints-in-system system-id)))))
 
 (define (list-waypoint-market-trade-goods system-id waypoint-id)
@@ -92,7 +81,7 @@
   (map (λ (x) (hash-ref x 'symbol)) (list-waypoint-market-exports waypoint-id)))
 
 (define (display-all-waypoint-markets system-id)
-  (map (λ (mp) (display-market system-id mp)) (list-marketplace-waypoint-symbols system-id)))
+  (map (λ (mp) (display-market system-id mp)) (list-waypoints-with-trait system-id "MARKETPLACE")))
 
 (define (display-shipyard-ship details)
   (printf "~s; ~s; ~s~n"
@@ -154,8 +143,8 @@
                        (hash-ref 'deliver))])
     (findf (λ (d) (equal? (hash-ref d 'tradeSymbol) trade-symbol)) deliverables)))
                       
-(define (display-market system-id waypoint-id)
-  (let* ([market (data (get-market system-id waypoint-id))]
+(define (display-market system-id waypoint)
+  (let* ([market (data (get-market system-id (symbol waypoint)))]
          [imports (hash-ref market 'imports)]
          [exports (hash-ref market 'exports)]
          [exchange (hash-ref market 'exchange)]
@@ -173,7 +162,7 @@
                 (hash-ref tg 'sellPrice))))))
 
 (define (display-all-markets system-id)
-  (map (λ (mp) (display-market system-id mp)) (list-marketplace-waypoint-symbols system-id)))
+  (map (λ (mp) (display-market system-id mp)) (list-waypoints-with-trait system-id "MARKETPLACE")))
 
 (define (list-recruiting-factions)
   (map symbol (filter (λ (f) (hash-ref f 'isRecruiting)) (list-factions))))

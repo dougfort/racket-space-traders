@@ -2,7 +2,6 @@
 
 ;; 
 
-(require space-traders-v2/access)
 (require space-traders-v2/agents)
 (require space-traders-v2/contracts)
 (require space-traders-v2/fleet)
@@ -13,14 +12,6 @@
 (require "directory.rkt")
 (require "try-scripts.rkt")
 (require "wait-queue.rkt")
-
-(define (read-access-token)
-  (define access-token-path "access-token.txt")
-  (string-trim (port->string (open-input-file access-token-path) #:close? #t)))
-
-(define (run fn)
-  (parameterize ([access-token (read-access-token)])
-    (fn)))
 
 (define (extract-loop)
   (define ship-id "DRFOGOUT-1")
