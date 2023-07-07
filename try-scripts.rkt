@@ -41,26 +41,26 @@
   (seconds->date (+ (current-seconds) amount) #f))
 
 (define check-count
-  (λ (script-id state) (let ([timestamp (current-utc-date)]
-                             [next-count (add1 (hash-ref state 'count 0))]
-                             [max-count (hash-ref state 'max-count 1)])
-                         (printf "check-count: next ~s; max ~s~n" next-count max-count)
-                         (cond                                
-                           [(>= next-count max-count)
-                            (task-result timestamp 'increment (hash-set state 'count 0))]
-                           [else
-                            (task-result timestamp 'repeat (hash-set state 'count next-count))]))))
+  (λ (state) (let ([timestamp (current-utc-date)]
+                   [next-count (add1 (hash-ref state 'count 0))]
+                   [max-count (hash-ref state 'max-count 1)])
+               (printf "check-count: next ~s; max ~s~n" next-count max-count)
+               (cond                                
+                 [(>= next-count max-count)
+                  (task-result timestamp 'increment (hash-set state 'count 0))]
+                 [else
+                  (task-result timestamp 'repeat (hash-set state 'count next-count))]))))
 
 ;; navigate to agent headquarters
 ;; then navigate to the asteroid field and back
 (define (build-navigate-script ship-id asteroid-field)
   (define hq (agent-headquarters (data (get-agent))))
   (define navigate-to-hq
-    (λ (script-id state) (let ([timestamp (navigate ship-id hq)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (navigate ship-id hq)])
+                 (task-result timestamp 'increment state)))) 
   (define navigate-to-asteroid-field
-    (λ (script-id state) (let ([timestamp (navigate ship-id asteroid-field)])
-                           (task-result timestamp 'increment state))))     
+    (λ (state) (let ([timestamp (navigate ship-id asteroid-field)])
+                 (task-result timestamp 'increment state))))     
      
   (list->vector (list
                  (task null navigate-to-hq)
@@ -71,46 +71,46 @@
 (define (build-negotiate-script ship-id)
   (define hq (agent-headquarters))
   (define navigate-to-hq
-    (λ (script-id state) (let ([timestamp (navigate ship-id hq)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (navigate ship-id hq)])
+                 (task-result timestamp 'increment state)))) 
   (define negotiate-at-hq
-    (λ (script-id state) (let ([timestamp (current-utc-date)])
-                           (negotiate ship-id)
-                           (task-result timestamp 'increment state))))      
+    (λ (state) (let ([timestamp (current-utc-date)])
+                 (negotiate ship-id)
+                 (task-result timestamp 'increment state))))      
   (list->vector (list
                  (task null navigate-to-hq)
                  (task null negotiate-at-hq))))
 
 (define (build-extract-loop-script ship-id source-id system-id market-id-1 market-id-2)
   (define navigate-to-source
-    (λ (script-id state) (let ([timestamp (navigate ship-id source-id)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (navigate ship-id source-id)])
+                 (task-result timestamp 'increment state)))) 
   (define navigate-to-market-1
-    (λ (script-id state) (let ([timestamp (navigate ship-id market-id-1)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (navigate ship-id market-id-1)])
+                 (task-result timestamp 'increment state)))) 
   
   (define navigate-to-market-2
-    (λ (script-id state) (let ([timestamp (navigate ship-id market-id-2)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (navigate ship-id market-id-2)])
+                 (task-result timestamp 'increment state)))) 
   
   (define extract-from-current-location
-    (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
-                           (printf "extract-from-current-location: remaining capacity ~s~n" remaining-capacity)
-                           (cond
-                             [(zero? remaining-capacity) (task-result timestamp 'increment state)]
-                             [else (task-result timestamp 'extract state)])))) 
+    (λ (state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
+                 (printf "extract-from-current-location: remaining capacity ~s~n" remaining-capacity)
+                 (cond
+                   [(zero? remaining-capacity) (task-result timestamp 'increment state)]
+                   [else (task-result timestamp 'extract state)])))) 
   
   (define sell-cargo-at-market-1
-    (λ (script-id state) (let ([timestamp (sell ship-id system-id market-id-1)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (sell ship-id system-id market-id-1)])
+                 (task-result timestamp 'increment state)))) 
   
   (define sell-cargo-at-market-2
-    (λ (script-id state) (let ([timestamp (sell ship-id system-id market-id-2)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (sell ship-id system-id market-id-2)])
+                 (task-result timestamp 'increment state)))) 
   
   (define jettison-all-cargo
-    (λ (script-id state) (let ([timestamp (jettison ship-id)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (jettison ship-id)])
+                 (task-result timestamp 'increment state)))) 
   
   (list->vector (list
                  (task 'repeat navigate-to-source)
@@ -129,55 +129,55 @@
                                     contract-dest-id
                                     market-dest-id)
   (define navigate-to-source
-    (λ (script-id state) (let ([timestamp (navigate ship-id source-id)])
-                           (task-result timestamp 'increment state))))
+    (λ (state) (let ([timestamp (navigate ship-id source-id)])
+                 (task-result timestamp 'increment state))))
   
   (define navigate-to-contract-dest
-    (λ (script-id state) (let ([timestamp (navigate ship-id contract-dest-id)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (navigate ship-id contract-dest-id)])
+                 (task-result timestamp 'increment state)))) 
   
   (define navigate-to-market-dest
-    (λ (script-id state) (let ([timestamp (navigate ship-id market-dest-id)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (navigate ship-id market-dest-id)])
+                 (task-result timestamp 'increment state)))) 
   
   (define survey-local-waypoint
-    (λ (script-id state) (let-values ([(timestamp next-state) (survey state ship-id)])
-                           (task-result timestamp 'increment next-state))))
+    (λ (state) (let-values ([(timestamp next-state) (survey state ship-id)])
+                 (task-result timestamp 'increment next-state))))
   
   (define extract-from-current-location
-    (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
-                           (printf "extract-from-current-location: remaining capacity ~s~n" remaining-capacity)
-                           (cond
-                             [(zero? remaining-capacity) (task-result timestamp 'increment state)]
-                             [else (task-result timestamp 'extract state)])))) 
+    (λ (state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
+                 (printf "extract-from-current-location: remaining capacity ~s~n" remaining-capacity)
+                 (cond
+                   [(zero? remaining-capacity) (task-result timestamp 'increment state)]
+                   [else (task-result timestamp 'extract state)])))) 
   
   (define deliver-contract-cargo-at-dest
-    (λ (script-id state) (let ([timestamp (deliver contract-id ship-id contract-cargo-id)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (deliver contract-id ship-id contract-cargo-id)])
+                 (task-result timestamp 'increment state)))) 
   
   (define sell-cargo-at-contract-dest
-    (λ (script-id state) (let ([timestamp (sell ship-id system-id contract-dest-id)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (sell ship-id system-id contract-dest-id)])
+                 (task-result timestamp 'increment state)))) 
   
   (define sell-cargo-at-market-dest
-    (λ (script-id state) (let ([timestamp (sell ship-id system-id market-dest-id)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (sell ship-id system-id market-dest-id)])
+                 (task-result timestamp 'increment state)))) 
   
   (define jettison-all-cargo
-    (λ (script-id state) (let ([timestamp (jettison ship-id)])
-                           (task-result timestamp 'increment state))))
+    (λ (state) (let ([timestamp (jettison ship-id)])
+                 (task-result timestamp 'increment state))))
 
   (define check-contract-status
     ;; TODO: handle multiple deliverables
-    (λ (script-id state) (let-values ([(timestamp units-needed)
-                                       (compute-units-needed contract-id contract-cargo-id)])
-                           (cond
-                             [(zero? units-needed) (task-result timestamp 'increment state)]
-                             [else (task-result timestamp 'repeat state)]))))
+    (λ (state) (let-values ([(timestamp units-needed)
+                             (compute-units-needed contract-id contract-cargo-id)])
+                 (cond
+                   [(zero? units-needed) (task-result timestamp 'increment state)]
+                   [else (task-result timestamp 'repeat state)]))))
                                       
   (define mark-contract-fulfilled
-    (λ (script-id state) (let ([timestamp (fulfill contract-id)])
-                           (task-result timestamp 'increment state))))
+    (λ (state) (let ([timestamp (fulfill contract-id)])
+                 (task-result timestamp 'increment state))))
 
   (list->vector (list
                  (task 'repeat navigate-to-source)
@@ -198,19 +198,19 @@
   ;; fur this, which does not have a survey mount
   
   (define extract-from-current-location
-    (λ (script-id state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
-                           (printf "extract-from-current-location:  remaining capacity ~s~n" remaining-capacity)
-                           (cond
-                             [(zero? remaining-capacity) (task-result timestamp 'increment state)]
-                             [else (task-result timestamp 'extract state)]))))
+    (λ (state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
+                 (printf "extract-from-current-location:  remaining capacity ~s~n" remaining-capacity)
+                 (cond
+                   [(zero? remaining-capacity) (task-result timestamp 'increment state)]
+                   [else (task-result timestamp 'extract state)]))))
     
   (define sell-cargo-at-market
-    (λ (script-id state) (let ([timestamp (sell ship-id system-id market-id)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (sell ship-id system-id market-id)])
+                 (task-result timestamp 'increment state)))) 
   
   (define jettison-all-cargo
-    (λ (script-id state) (let ([timestamp (jettison ship-id)])
-                           (task-result timestamp 'increment state)))) 
+    (λ (state) (let ([timestamp (jettison ship-id)])
+                 (task-result timestamp 'increment state)))) 
   
   (list->vector (list
                  (task 'repeat jettison-all-cargo)
