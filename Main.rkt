@@ -12,6 +12,7 @@
 (require "directory.rkt")
 (require "try-scripts.rkt")
 (require "wait-queue.rkt")
+(require "runner.rkt")
 
 (define (extract-loop)
   (define ship-id "DRFOGOUT-1")
@@ -29,8 +30,8 @@
   
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos 'extract 0) state))
+                       (script-pos 'extract 0))
 
-  (process-queue scripts queue)
+  (process-queue scripts state queue)
   
   (printf "finish extract loop: ship: ~s credits ~s~n" ship-id (agent-credits (data (get-agent)))))

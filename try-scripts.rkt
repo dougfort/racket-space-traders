@@ -228,11 +228,11 @@
   
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos 'ship-1-script-id 0) state))
+                       (script-pos 'ship-1-script-id 0))
 
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos 'ship-2-script-id 0) state))
+                       (script-pos 'ship-2-script-id 0))
 
   (process-queue scripts queue))
 
@@ -244,7 +244,7 @@
   
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos 'negotiate 0) (hash)))
+                       (script-pos 'negotiate 0))
 
   (process-queue scripts queue))
 
@@ -263,7 +263,7 @@
   
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos 'extract 0) state))
+                       (script-pos 'extract 0))
 
   (process-queue scripts queue)
   
@@ -286,7 +286,7 @@
   
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos 'contract-loop 0) state))
+                       (script-pos 'contract-loop 0))
 
   (process-queue scripts queue)
   
@@ -304,7 +304,7 @@
   
   (queue-push-by-date! queue
                        (current-utc-date)
-                       (task-step (script-pos 'extract 0) state))
+                       (script-pos 'extract 0))
 
   (process-queue scripts queue)
   
