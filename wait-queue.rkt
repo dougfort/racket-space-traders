@@ -71,7 +71,7 @@
                            [else
                             (let* ([task-item (vector-ref script script-index)]
                                    [fn (task-fn task-item)]
-                                   [result (fn script-id state)]
+                                   [result (fn state)]
                                    [timestamp (task-result-timestamp result)]
                                    [op (task-result-op result)]
                                    [index (cond
