@@ -35,7 +35,7 @@
 (define (register)
   (define callsign "DRFOGOUT")
   ;(define faction "COSMIC")
-  (define faction "QUANTUM")
+  (define faction "OBSIDIAN")
   (define available-factions '("COSMIC"
                                "VOID"
                                "GALACTIC"
@@ -54,7 +54,8 @@
                     (hash-ref 'token))])
     (println token)
     (with-output-to-file token-file
-      (λ () (printf token)))))
+      (λ () (printf token))
+      #:exists 'replace)))
     
          
     
