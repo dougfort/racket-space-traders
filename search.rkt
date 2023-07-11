@@ -2,11 +2,12 @@
 
 ;; 
 
+(require space-traders-v2/agents)
+(require space-traders-v2/systems)
+(require space-traders-v2/wrappers\)
+
 (require "directory.rkt")
 (require "explore.rkt")
-(require "api/agents.rkt")
-(require "api/systems.rkt")
-(require "api/wrappers.rkt")
 (require "lenses/agent.rkt")
 
 (define (display-jump-gate-systems system-id waypoint-id)

@@ -2,7 +2,9 @@
 
 ;; 
 
-(provide ship-status
+(provide ship-role
+         ship-status
+         ship-system
          ship-location
          ship-inventory
          ship-inventory-units
@@ -15,10 +17,20 @@
 
 (require threading)
 
+(define (ship-role ship-details)
+  (~> ship-details
+      (hash-ref 'registration)
+      (hash-ref 'role)))
+
 (define (ship-status ship-details)
   (~> ship-details
       (hash-ref 'nav)
       (hash-ref 'status)))
+
+(define (ship-system ship-details)
+  (~> ship-details
+      (hash-ref 'nav)
+      (hash-ref 'systemSymbol)))
 
 (define (ship-location ship-details)
   (~> ship-details
@@ -32,9 +44,9 @@
 
 (define (ship-inventory-units inventory trade-symbol)
   (let ([item (findf (λ (t) (equal? (hash-ref t 'symbol) trade-symbol)) inventory)])
-      (if item
-          (hash-ref item 'units)
-          #f)))
+    (if item
+        (hash-ref item 'units)
+        #f)))
 
 (define (ship-cargo-capacity ship-details)
   (~> ship-details

@@ -5,9 +5,12 @@
 (require space-traders-v2/agents)
 (require space-traders-v2/contracts)
 (require space-traders-v2/fleet)
+(require space-traders-v2/systems)
 (require space-traders-v2/wrappers)
 
 (require "lenses/agent.rkt")
+(require "lenses/ship.rkt")
+(require "lenses/waypoint.rkt")
 
 (require "directory.rkt")
 (require "try-scripts.rkt")

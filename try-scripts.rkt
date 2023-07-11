@@ -20,10 +20,13 @@
 (require "lenses/cargo.rkt")
 (require "lenses/cooldown.rkt")
 (require "lenses/contract-deliver-good.rkt")
+(require "lenses/waypoint.rkt")
 (require "lenses/all.rkt")
 (require "wait-queue.rkt")
 (require "distance.rkt")
 (require "directory.rkt")
+(require "runner.rkt")
+(require "explore.rkt")
 
 ;; return a hash of (symbol . #t) containing all trade goods at the local market
 (define (get-market-trade-goods system-id waypoint-id)    
@@ -473,4 +476,13 @@
          (values expiration (hash-set state survey-key (first surveys))))]
       [else (values (current-utc-date) state)])))
        
+
+(define (initial-scan state)
+  (define system-id (ship-system (first (data (list-ships)))))
+  (define waypoints (list-all-waypoints system-id))
+  (for ([wp (in-list waypoints)])
+    (printf "~s ~s: ~s~n"
+            (waypoint-symbol wp)
+            (waypoint-type wp)
+            (map (λ (or) (hash-ref or 'symbol)) (hash-ref wp 'orbitals)))))
     
