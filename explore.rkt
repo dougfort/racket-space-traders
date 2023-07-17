@@ -5,6 +5,7 @@
 
 (provide list-all-waypoints
          waypoint-has-trait?
+         list-waypoints-with-trait
          display-waypoint-traits
          display-all-markets)
 
@@ -17,7 +18,6 @@
 (require space-traders-v2/factions)
 (require space-traders-v2/wrappers)
 
-(require "directory.rkt")
 (require "timestamp.rkt")
 (require "distance.rkt")
 (require "paged-reader.rkt")
@@ -143,8 +143,8 @@
                        (hash-ref 'deliver))])
     (findf (λ (d) (equal? (hash-ref d 'tradeSymbol) trade-symbol)) deliverables)))
                       
-(define (display-market system-id waypoint)
-  (let* ([market (data (get-market system-id (symbol waypoint)))]
+(define (display-market system-id waypoint-id)
+  (let* ([market (data (get-market system-id waypoint-id))]
          [imports (hash-ref market 'imports)]
          [exports (hash-ref market 'exports)]
          [exchange (hash-ref market 'exchange)]

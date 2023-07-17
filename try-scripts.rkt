@@ -24,7 +24,6 @@
 (require "lenses/all.rkt")
 (require "wait-queue.rkt")
 (require "distance.rkt")
-(require "directory.rkt")
 (require "runner.rkt")
 (require "explore.rkt")
 
@@ -84,36 +83,63 @@
                  (task null navigate-to-hq)
                  (task null negotiate-at-hq))))
 
-(define (build-extract-loop-script ship-id source-id system-id market-id-1 market-id-2)
+(define (build-extract-loop-script)
+  
   (define navigate-to-source
-    (λ (state) (let ([timestamp (navigate ship-id source-id)])
-                 (task-result timestamp 'increment state)))) 
+    (λ (state)
+      (let* ([ship-id (hash-ref state  'command-ship-symbol)]
+             [source-id (hash-ref state 'asteroid-field)])
+        (let ([timestamp (navigate ship-id source-id)])
+          (task-result timestamp 'increment state)))))
+  
   (define navigate-to-market-1
-    (λ (state) (let ([timestamp (navigate ship-id market-id-1)])
-                 (task-result timestamp 'increment state)))) 
+    (λ (state)
+      (let* ([ship-id (hash-ref state  'command-ship-symbol)]
+             ;; TODO: handle actual number of markets
+             [market-id-1 (first (hash-ref state 'exchange-markets))])
+        (let ([timestamp (navigate ship-id market-id-1)])
+          (task-result timestamp 'increment state))))) 
   
   (define navigate-to-market-2
-    (λ (state) (let ([timestamp (navigate ship-id market-id-2)])
-                 (task-result timestamp 'increment state)))) 
+    (λ (state)
+      (let* ([ship-id (hash-ref state  'command-ship-symbol)]
+             ;; TODO: handle actual number of markets
+             [market-id-2 (second (hash-ref state 'exchange-markets))])
+        (let ([timestamp (navigate ship-id market-id-2)])
+          (task-result timestamp 'increment state))))) 
   
   (define extract-from-current-location
-    (λ (state) (let-values ([(timestamp remaining-capacity) (extract ship-id)])
-                 (printf "extract-from-current-location: remaining capacity ~s~n" remaining-capacity)
-                 (cond
-                   [(zero? remaining-capacity) (task-result timestamp 'increment state)]
-                   [else (task-result timestamp 'extract state)])))) 
+    (λ (state)
+      (let ([ship-id (hash-ref state  'command-ship-symbol)])
+        (let-values ([(timestamp remaining-capacity) (extract ship-id)])
+          (printf "extract-from-current-location: remaining capacity ~s~n" remaining-capacity)
+          (cond
+            [(zero? remaining-capacity) (task-result timestamp 'increment state)]
+            [else (task-result timestamp 'extract state)]))))) 
   
   (define sell-cargo-at-market-1
-    (λ (state) (let ([timestamp (sell ship-id system-id market-id-1)])
-                 (task-result timestamp 'increment state)))) 
+    (λ (state)
+      (let* ([ship-id (hash-ref state  'command-ship-symbol)]
+             [system-id (hash-ref state 'system-id)]
+             ;; TODO: handle actual number of markets
+             [market-id-1 (first (hash-ref state 'exchange-markets))])
+        (let ([timestamp (sell ship-id system-id market-id-1)])
+          (task-result timestamp 'increment state)))))
   
   (define sell-cargo-at-market-2
-    (λ (state) (let ([timestamp (sell ship-id system-id market-id-2)])
-                 (task-result timestamp 'increment state)))) 
+    (λ (state)
+      (let* ([ship-id (hash-ref state  'command-ship-symbol)]
+             [system-id (hash-ref state 'system-id)]
+             ;; TODO: handle actual number of markets
+             [market-id-2 (second (hash-ref state 'exchange-markets))])
+        (let ([timestamp (sell ship-id system-id market-id-2)])
+          (task-result timestamp 'increment state))))) 
   
   (define jettison-all-cargo
-    (λ (state) (let ([timestamp (jettison ship-id)])
-                 (task-result timestamp 'increment state)))) 
+    (λ (state)
+      (let ([ship-id (hash-ref state  'command-ship-symbol)])
+        (let ([timestamp (jettison ship-id)])
+          (task-result timestamp 'increment state))))) 
   
   (list->vector (list
                  (task 'repeat navigate-to-source)
@@ -229,13 +255,13 @@
   (hash-set! scripts 'ship-1-script-id (build-navigate-script "DRFOGOUT-1" "X1-HQ18-98695F"))
   (hash-set! scripts 'ship-2-script-id (build-navigate-script "DRFOGOUT-2" "X1-HQ18-98695F"))
   
-  (queue-push-by-date! queue
-                       (current-utc-date)
-                       (script-pos 'ship-1-script-id 0))
+  (queue-push-by-date queue
+                      (current-utc-date)
+                      (script-pos 'ship-1-script-id 0))
 
-  (queue-push-by-date! queue
-                       (current-utc-date)
-                       (script-pos 'ship-2-script-id 0))
+  (queue-push-by-date queue
+                      (current-utc-date)
+                      (script-pos 'ship-2-script-id 0))
 
   (process-queue scripts queue))
 
@@ -245,9 +271,9 @@
   
   (hash-set! scripts 'negotiate (build-negotiate-script "DRFOGOUT-1"))
   
-  (queue-push-by-date! queue
-                       (current-utc-date)
-                       (script-pos 'negotiate 0))
+  (queue-push-by-date queue
+                      (current-utc-date)
+                      (script-pos 'negotiate 0))
 
   (process-queue scripts queue))
 
@@ -256,58 +282,46 @@
   
   (printf "start extract loop: ship: ~s credits ~s~n" ship-id (agent-credits (data (get-agent))))
   
-  (define extract-script (build-extract-loop-script ship-id
-                                                    asteroid-field-id
-                                                    system-id
-                                                    market-dest-id
-                                                    asteroid-field-id))
+  (define extract-script (build-extract-loop-script))
   (define scripts (hash 'extract extract-script))
   (define state (hash 'count 0 'max-count 10))
   
-  (queue-push-by-date! queue
-                       (current-utc-date)
-                       (script-pos 'extract 0))
+  (queue-push-by-date queue
+                      (current-utc-date)
+                      (script-pos 'extract 0))
 
   (process-queue scripts queue)
   
   (printf "finish extract loop: ship: ~s credits ~s~n" ship-id (agent-credits (data (get-agent)))))
 
-(define (run-contract-loop contract-id [ship-id "DRFOGOUT-1"])
-  (printf "start contract loop: ~s; ~s~n" contract-id ship-id)
+(define (run-contract-loop contract-id)
+  (printf "start contract loop: ~s~n" contract-id)
   
   (define queue (make-queue))
-  (define contract-loop-script (build-contract-loop-script contract-id
-                                                           contract-cargo-id
-                                                           ship-id
-                                                           asteroid-field-id
-                                                           system-id
-                                                           contract-dest-id
-                                                           market-dest-id))
+  (define contract-loop-script (build-contract-loop-script contract-id))
   
   (define scripts (hash 'contract-loop contract-loop-script))
   (define state (hash))
   
-  (queue-push-by-date! queue
-                       (current-utc-date)
-                       (script-pos 'contract-loop 0))
+  (queue-push-by-date queue
+                      (current-utc-date)
+                      (script-pos 'contract-loop 0))
 
   (process-queue scripts queue)
   
-  (printf "finish contract loop: ~s; ~s~n" contract-id ship-id))
+  (printf "finish contract loop: ~s~n" contract-id))
   
 (define (run-extract-local-loop [ship-id "DRFOGOUT-1"] [max-count 30])
   (printf "start extract local loop: ship: ~s credits ~s~n" ship-id (agent-credits (data (get-agent))))
   
   (define queue (make-queue))
-  (define extract-script (build-local-extract-loop-script ship-id
-                                                          system-id
-                                                          asteroid-field-id))
+  (define extract-script (build-local-extract-loop-script))
   (define scripts (hash 'extract extract-script))
   (define state (hash 'count 0 'max-count max-count))
   
-  (queue-push-by-date! queue
-                       (current-utc-date)
-                       (script-pos 'extract 0))
+  (queue-push-by-date queue
+                      (current-utc-date)
+                      (script-pos 'extract 0))
 
   (process-queue scripts queue)
   
@@ -475,14 +489,3 @@
          (printf "survey: ship: ~s: ~s~n" ship-id surveys)
          (values expiration (hash-set state survey-key (first surveys))))]
       [else (values (current-utc-date) state)])))
-       
-
-(define (initial-scan state)
-  (define system-id (ship-system (first (data (list-ships)))))
-  (define waypoints (list-all-waypoints system-id))
-  (for ([wp (in-list waypoints)])
-    (printf "~s ~s: ~s~n"
-            (waypoint-symbol wp)
-            (waypoint-type wp)
-            (map (λ (or) (hash-ref or 'symbol)) (hash-ref wp 'orbitals)))))
-    
