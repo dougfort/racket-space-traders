@@ -52,7 +52,7 @@
       (cond
         [(>= script-index (vector-length script))
          (printf "end of script ~s~n" script-id)
-         (values scripts state queue)]
+         (values (hash-remove scripts script-id) state inner-queue)]
         [else
          (let* ([task-item (vector-ref script script-index)]
                 [fn (task-fn task-item)]
@@ -68,8 +68,7 @@
             (task-result-state result)
             (queue-push-by-date inner-queue
                                 timestamp
-                                (script-pos script-id index))
-            ))]))))
+                                (script-pos script-id index))))]))))
          
 ;; search a script vector
 ;; returning the index of a matching label
