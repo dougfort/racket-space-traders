@@ -4,9 +4,8 @@
 
 (require space-traders-v2/agents)
 (require space-traders-v2/systems)
-(require space-traders-v2/wrappers\)
+(require space-traders-v2/wrappers)
 
-(require "directory.rkt")
 (require "explore.rkt")
 (require "lenses/agent.rkt")
 

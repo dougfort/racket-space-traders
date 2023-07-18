@@ -35,7 +35,7 @@
 (define (register)
   (define callsign "DRFOGOUT")
   ;(define faction "COSMIC")
-  (define faction "OBSIDIAN")
+  (define faction "QUANTUM")
   (define available-factions '("COSMIC"
                                "VOID"
                                "GALACTIC"
