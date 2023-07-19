@@ -18,14 +18,18 @@
 (require "runner.rkt")
 
 (define (extract-loop)
-  (define ship-id "DRFOGOUT-1")
+
+  (let ([state (initial-scan (hash 'count 0 'max-count 10))])
+    (printf "start extract loop: ship: ~s credits ~s~n"
+            (hash-ref state 'command-ship-symbol)
+            (agent-credits (data (get-agent))))
   
-  (printf "start extract loop: ship: ~s credits ~s~n" ship-id (agent-credits (data (get-agent))))
+    (process-queue (hash 'extract (build-extract-loop-script))
+                   state
+                   (queue-push-by-date (make-queue)
+                                       (current-utc-date)
+                                       (script-pos 'extract 0)))
   
-  (process-queue (hash 'extract (build-extract-loop-script))
-                 (initial-scan (hash 'count 0 'max-count 10))
-                 (queue-push-by-date (make-queue)
-                                     (current-utc-date)
-                                     (script-pos 'extract 0)))
-  
-  (printf "finish extract loop: ship: ~s credits ~s~n" ship-id (agent-credits (data (get-agent)))))
+    (printf "finish extract loop: ship: ~s credits ~s~n"
+            (hash-ref state 'command-ship-symbol)
+            (agent-credits (data (get-agent))))))
